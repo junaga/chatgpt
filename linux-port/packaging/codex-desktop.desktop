@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Codex Desktop
+Comment=Codex desktop compatibility port for Linux
+Exec=/usr/bin/codex-desktop %U
+Icon=codex-desktop
+Terminal=false
+Type=Application
+Categories=Development;Utility;
+MimeType=x-scheme-handler/codex;
+StartupWMClass=ChatGPT (Linux Compat)
