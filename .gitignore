@@ -1,0 +1,7 @@
+/original/
+/extracted/
+/dist/
+/linux-port/node_modules/
+/linux-port/state/
+.DS_Store
+*.log
