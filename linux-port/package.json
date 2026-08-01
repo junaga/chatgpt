@@ -12,7 +12,8 @@
   "codexSparklePublicKey": "mNfr1v9t63BfgDtlw4C8lRvSY6uMggIXABDOCi3tS6k=",
   "scripts": {
     "start": "electron launcher.cjs",
-    "test": "node --test tests/port-smoke.test.mjs"
+    "test": "node --test tests/native-boundaries.test.mjs tests/port-smoke.test.mjs",
+    "test:live": "CODEX_LIVE_TEST=1 node --test tests/live-turn.test.mjs"
   },
   "dependencies": {
     "@electron/rebuild": "^4.2.0",
