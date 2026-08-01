@@ -54,8 +54,26 @@ It is also installed in the desktop application menu as **Codex Desktop**.
 Rebuild with:
 
 ```bash
-sh /usr/local/codex-macos-analysis/linux-port/build-deb.sh
+sh ~/dev/chatgpt-linux/linux-port/build-deb.sh
 ```
+
+## Focused port smoke test
+
+The automated test intentionally checks only the compatibility boundary changed
+by this project: the installed Debian package starts with Chromium's sandbox
+enabled, exposes the bundled production renderer, and accepts a disposable Git
+project. It uses a temporary Electron profile and `CODEX_HOME`; it does not send
+an agent turn or consume model usage.
+
+```bash
+cd ~/dev/chatgpt-linux/linux-port
+npm test
+```
+
+The test drives the real `/usr/bin/codex-desktop` process over Electron's remote
+debugging protocol. Set `CODEX_DESKTOP_EXECUTABLE` to test another installed
+build. This is a smoke test, not evidence that upstream product features or the
+known macOS-only integrations work on Linux.
 
 ## Testing needed
 
