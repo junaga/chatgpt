@@ -30,8 +30,14 @@ the upstream app has been acquired and extracted for legitimate local analysis.
 `npm test` under `linux-port/` starts the installed Debian application with a
 temporary profile and Git repository, connects through Electron's debugging
 protocol, checks that the production renderer mounts, and verifies the Chromium
-sandbox installation. It does not sign in, submit prompts, execute commands, or
-claim coverage of unchanged upstream features.
+sandbox installation. It also loads the installed Electron-ABI builds of
+`better-sqlite3` and `node-pty`, checking database persistence across processes
+and PTY output, exit status, and cancellation. It does not sign in or submit
+prompts.
+
+An explicit `npm run test:live` test can submit one authenticated turn against a
+disposable repository and verify its exact file edit. It consumes account usage
+and creates a remote thread, so it is intentionally excluded from `npm test`.
 
 ## Known gaps
 

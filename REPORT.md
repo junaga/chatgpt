@@ -75,6 +75,10 @@ Verified runtime milestones:
 - app-server state becomes connected;
 - IPC router listens on `$CODEX_HOME/ipc/ipc.sock`;
 - the production renderer mounts its application routes;
+- the installed Linux `better-sqlite3` build writes and reopens a database in
+  separate Electron processes;
+- the installed Linux `node-pty` build streams child output, preserves a
+  nonzero exit code, and terminates a running child;
 - successful renderer requests include configuration, models, threads,
   permission profiles, plugins, MCP status, and collaboration modes;
 - the client configuration explicitly advertises downloadable
@@ -86,8 +90,9 @@ with Chromium's sandbox enabled, completes authenticated ChatGPT requests, loads
 projects and recent threads, reconciles bundled plugins, and initializes
 browser-use IPC.
 
-These results do not demonstrate feature completeness. No full agent turn was
-submitted through the packaged UI, and voice, notifications, shortcuts, deep
+These results do not demonstrate feature completeness. No full agent turn has
+yet been submitted by the automated packaged-UI test; that usage-consuming test
+is available only as an explicit opt-in. Voice, notifications, shortcuts, deep
 links, automations, SSH, browser-extension pairing, account lifecycle, and
 update behavior remain untested. The browser Node-REPL backend reports a missing
 runtime component. Computer use, Apple Events, Objective-C helpers, macOS

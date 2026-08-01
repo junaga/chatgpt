@@ -11,6 +11,8 @@ It is packaged, installed, and smoke-tested without disabling the Chromium
 sandbox. Verified working:
 
 - SQLite initialization and migrations
+- direct SQLite writes and reads across separate Electron processes
+- PTY output, nonzero child exit-code propagation, and cancellation
 - Codex CLI discovery, process spawn, and initialize handshake
 - Electron IPC router
 - configuration, authentication-status, model, thread, permission-profile,
@@ -59,11 +61,15 @@ sh ~/dev/chatgpt-linux/linux-port/build-deb.sh
 
 ## Focused port smoke test
 
-The automated test intentionally checks only the compatibility boundary changed
-by this project: the installed Debian package starts with Chromium's sandbox
-enabled, exposes the bundled production renderer, and accepts a disposable Git
-project. It uses a temporary Electron profile and `CODEX_HOME`; it does not send
-an agent turn or consume model usage.
+The automatic tests intentionally check only compatibility boundaries changed
+by this project. They verify that the installed Debian package starts with
+Chromium's sandbox enabled, exposes the bundled production renderer, accepts a
+disposable Git project, persists SQLite data across Electron processes, and
+streams PTY output plus exit status and terminates a running PTY. The native
+tests load the modules from the installed vendor application through
+Electron—not through Node's incompatible native-module ABI. The smoke test uses
+a temporary Electron profile and `CODEX_HOME`; it does not send an agent turn or
+consume model usage.
 
 ```bash
 cd ~/dev/chatgpt-linux/linux-port
@@ -74,6 +80,19 @@ The test drives the real `/usr/bin/codex-desktop` process over Electron's remote
 debugging protocol. Set `CODEX_DESKTOP_EXECUTABLE` to test another installed
 build. This is a smoke test, not evidence that upstream product features or the
 known macOS-only integrations work on Linux.
+
+An opt-in live test covers the remaining high-value port seam: renderer → IPC →
+Linux Codex app-server → authenticated model turn → file edit.
+
+```bash
+npm run test:live
+```
+
+It uses the current account in `${CODEX_LIVE_CODEX_HOME:-$HOME/.codex}`, creates
+a remote conversation, and consumes model usage. The project and Electron
+profile are temporary. Set `CODEX_LIVE_KEEP_ARTIFACTS=1` to retain the local
+fixture after a failure. This test exists but has not yet been executed in this
+analysis, so a passing result is not claimed here.
 
 ## Testing needed
 
