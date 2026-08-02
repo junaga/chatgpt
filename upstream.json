@@ -1,19 +1,7 @@
 {
-  "version": "26.727.40816",
-  "build": "6067",
-  "portRevision": 1,
+  "portRevision": 2,
   "dmgSha256": "fb93a239c811c7639cf45a90ff36c262fa0290640140cd12da3fdc60b62255ae",
-  "bundleId": "com.openai.codex",
   "appPath": "ChatGPT Installer/ChatGPT.app",
-  "electron": {
-    "macos": "42.3.0",
-    "linux": "41.10.3"
-  },
-  "codexCli": "0.146.0",
-  "nativeModules": [
-    "better-sqlite3",
-    "node-pty"
-  ],
   "nativeArtifacts": {
     "better-sqlite3": [
       "build/Release/better_sqlite3.node"
@@ -22,19 +10,15 @@
       "build/Release/pty.node"
     ]
   },
-  "skippedSymlinks": {
-    "Contents/Resources/cua_node/lib/node_modules/.bin/opencollective-postinstall": "../opencollective-postinstall/index.js",
-    "Contents/Resources/cua_node/lib/node_modules/.bin/pixelmatch": "../pixelmatch/bin/pixelmatch",
-    "Contents/Resources/cua_node/lib/node_modules/.bin/playwright": "../playwright/cli.js",
-    "Contents/Resources/cua_node/lib/node_modules/.bin/playwright-core": "../playwright-core/cli.js",
-    "Contents/Resources/cua_node/lib/node_modules/.bin/semver": "../semver/bin/semver.js",
-    "Contents/Resources/cua_node/lib/node_modules/.bin/sky_linux_arm64": "../@oai/sky/bin/linux/sky_linux_arm64",
-    "Contents/Resources/cua_node/lib/node_modules/.bin/sky_linux_x64": "../@oai/sky/bin/linux/sky_linux_x64",
-    "Contents/Resources/cua_node/lib/node_modules/tesseract.js/node_modules/.bin/opencollective-postinstall": "../../../opencollective-postinstall/index.js",
-    "Contents/Resources/cua_node/lib/node_modules/sharp/node_modules/.bin/semver": "../../../semver/bin/semver.js"
-  },
-  "debian": {
-    "revision": "1",
-    "architecture": "amd64"
-  }
+  "acceptedExtractionWarnings": [
+    "Contents/Resources/cua_node/lib/node_modules/.bin/opencollective-postinstall",
+    "Contents/Resources/cua_node/lib/node_modules/.bin/pixelmatch",
+    "Contents/Resources/cua_node/lib/node_modules/.bin/playwright",
+    "Contents/Resources/cua_node/lib/node_modules/.bin/playwright-core",
+    "Contents/Resources/cua_node/lib/node_modules/.bin/semver",
+    "Contents/Resources/cua_node/lib/node_modules/.bin/sky_linux_arm64",
+    "Contents/Resources/cua_node/lib/node_modules/.bin/sky_linux_x64",
+    "Contents/Resources/cua_node/lib/node_modules/tesseract.js/node_modules/.bin/opencollective-postinstall",
+    "Contents/Resources/cua_node/lib/node_modules/sharp/node_modules/.bin/semver"
+  ]
 }

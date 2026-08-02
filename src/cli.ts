@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawn, type StdioOptions } from "node:child_process";
 import { constants } from "node:fs";
-import { access, chmod, cp, mkdir, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
+import { access, chmod, cp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -17,6 +17,11 @@ interface Options {
   output: string;
   work: string;
   keepWork: boolean;
+}
+
+interface VendorRelease {
+  version: string;
+  build: string;
 }
 
 function usage(): never {
@@ -87,23 +92,21 @@ async function requireFile(file: string, description: string): Promise<void> {
   }
 }
 
-async function validateExtractedApp(app: string, upstream: UpstreamRelease): Promise<void> {
+async function validateExtractedApp(app: string, upstream: UpstreamRelease): Promise<VendorRelease> {
   const resources = path.join(app, "Contents", "Resources");
   const packageJson = JSON.parse(await readFile(path.join(resources, "app.asar.extracted", "package.json"), "utf8"));
-  if (packageJson.version !== upstream.version) {
-    throw new Error(`Renderer version ${packageJson.version} does not match supported upstream ${upstream.version}`);
+  if (typeof packageJson.version !== "string" || typeof packageJson.codexBuildNumber !== "string") {
+    throw new Error("Extracted app does not contain version and build metadata");
   }
-  if (String(packageJson.codexBuildNumber) !== upstream.build) {
-    throw new Error(`Renderer build ${packageJson.codexBuildNumber} does not match supported upstream ${upstream.build}`);
-  }
-  for (const module of upstream.nativeModules) {
+  for (const module of Object.keys(upstream.nativeArtifacts)) {
     await requireFile(path.join(resources, "app.asar.extracted", "node_modules", module, "package.json"), `Native module ${module}`);
   }
   await requireFile(path.join(resources, "plugins"), "Bundled plugins");
   await requireFile(path.join(resources, "icon-chatgpt.png"), "Application icon");
+  return { version: packageJson.version, build: packageJson.codexBuildNumber };
 }
 
-async function extract(dmg: string, root: string, upstream: UpstreamRelease): Promise<string> {
+async function extract(dmg: string, root: string, upstream: UpstreamRelease): Promise<{ app: string; release: VendorRelease }> {
   const extracted = path.join(root, "dmg");
   await mkdir(extracted, { recursive: true });
   const extraction = await run("7z", ["x", dmg, `-o${extracted}`, "-y"], {
@@ -113,7 +116,7 @@ async function extract(dmg: string, root: string, upstream: UpstreamRelease): Pr
   const app = path.join(extracted, upstream.appPath);
   if (extraction.code === 2) {
     const errors = extraction.output.split("\n").filter(line => line.startsWith("ERROR:"));
-    const expected = new Set(Object.keys(upstream.skippedSymlinks).map(link => `${upstream.appPath}/${link}`));
+    const expected = new Set(upstream.acceptedExtractionWarnings.map(link => `${upstream.appPath}/${link}`));
     const actual = new Set<string>();
     for (const error of errors) {
       const match = error.match(/^ERROR: Dangerous link path was ignored : (.+?) : /);
@@ -122,40 +125,29 @@ async function extract(dmg: string, root: string, upstream: UpstreamRelease): Pr
     }
     if (actual.size !== expected.size) throw new Error("DMG extraction did not report the expected skipped symlinks");
   }
-  for (const [relativeLink, target] of Object.entries(upstream.skippedSymlinks)) {
-    const link = path.join(app, relativeLink);
-    const resolvedTarget = path.resolve(path.dirname(link), target);
-    if (!resolvedTarget.startsWith(`${app}${path.sep}`)) throw new Error(`Unsafe symlink target in upstream metadata: ${relativeLink}`);
-    await requireFile(resolvedTarget, `Symlink target for ${relativeLink}`);
-    await mkdir(path.dirname(link), { recursive: true });
-    try {
-      await access(link);
-    } catch {
-      await symlink(target, link);
-    }
-  }
   const resources = path.join(app, "Contents", "Resources");
   await requireFile(path.join(resources, "app.asar"), "Electron ASAR");
   const vendorApp = path.join(resources, "app.asar.extracted");
   const asar = path.join(repository, "node_modules", ".bin", "asar");
   await run(asar, ["extract", path.join(resources, "app.asar"), vendorApp]);
-  await validateExtractedApp(app, upstream);
-  return app;
+  const release = await validateExtractedApp(app, upstream);
+  return { app, release };
 }
 
-async function rebuildNativeModules(app: string, upstream: UpstreamRelease): Promise<void> {
+async function rebuildNativeModules(app: string, upstream: UpstreamRelease, electron: string): Promise<void> {
   const vendorApp = path.join(app, "Contents", "Resources", "app.asar.extracted");
+  const nativeModules = Object.keys(upstream.nativeArtifacts);
   const rebuild = path.join(desktop, "node_modules", ".bin", "electron-rebuild");
   await requireFile(rebuild, "electron-rebuild");
   await run(rebuild, [
     "--force",
-    "--version", upstream.electron.linux,
+    "--version", electron,
     "--arch", "x64",
     "--platform", "linux",
     "--module-dir", desktop,
-    "--only", upstream.nativeModules.join(","),
+    "--only", nativeModules.join(","),
   ]);
-  for (const module of upstream.nativeModules) {
+  for (const module of nativeModules) {
     for (const artifact of upstream.nativeArtifacts[module]) {
       const source = path.join(desktop, "node_modules", module, artifact);
       const destination = path.join(vendorApp, "node_modules", module, artifact);
@@ -166,17 +158,30 @@ async function rebuildNativeModules(app: string, upstream: UpstreamRelease): Pro
   }
 }
 
-async function writeDesktopPackageJson(destination: string, upstream: UpstreamRelease): Promise<void> {
-  const source = JSON.parse(await readFile(path.join(desktop, "package.json"), "utf8"));
-  source.version = upstream.version;
-  source.codexBuildNumber = upstream.build;
-  source.dependencies.electron = upstream.electron.linux;
+async function desktopElectronVersion(): Promise<string> {
+  const workspace = JSON.parse(await readFile(path.join(desktop, "package.json"), "utf8"));
+  const electron = workspace.devDependencies?.electron;
+  if (typeof electron !== "string" || !/^\d+\.\d+\.\d+$/.test(electron)) {
+    throw new Error("desktop/package.json must pin an exact Electron version");
+  }
+  return electron;
+}
+
+async function writeDesktopPackageJson(destination: string, vendorApp: string): Promise<void> {
+  const source = JSON.parse(await readFile(path.join(vendorApp, "package.json"), "utf8"));
+  source.name = "chatgpt-linux-desktop";
+  source.private = true;
+  source.main = "launcher.cjs";
+  delete source.scripts;
+  delete source.dependencies;
+  delete source.devDependencies;
   await writeFile(destination, `${JSON.stringify(source, null, 2)}\n`);
 }
 
-async function assembleDeb(app: string, buildRoot: string, output: string, upstream: UpstreamRelease): Promise<string> {
-  const packageVersion = `${upstream.version}-${upstream.debian.revision}`;
-  const packageBase = `codex-desktop-linux_${packageVersion}_${upstream.debian.architecture}`;
+async function assembleDeb(app: string, buildRoot: string, output: string, upstream: UpstreamRelease, release: VendorRelease): Promise<string> {
+  const architecture = "amd64";
+  const packageVersion = `${release.version}-${upstream.portRevision}`;
+  const packageBase = `codex-desktop-linux_${packageVersion}_${architecture}`;
   const packageRoot = path.join(buildRoot, packageBase);
   const installRoot = path.join(packageRoot, "opt", "codex-desktop-linux");
   const resources = path.join(app, "Contents", "Resources");
@@ -191,14 +196,15 @@ async function assembleDeb(app: string, buildRoot: string, output: string, upstr
 
   await cp(path.join(desktop, "node_modules", "electron", "dist"), installRoot, { recursive: true });
   await rename(path.join(installRoot, "electron"), path.join(installRoot, "codex-desktop"));
-  await cp(path.join(resources, "app.asar.extracted"), path.join(installRoot, "resources", "app", "vendor-app"), { recursive: true });
+  const vendorApp = path.join(resources, "app.asar.extracted");
+  await cp(vendorApp, path.join(installRoot, "resources", "app", "vendor-app"), { recursive: true });
   await cp(path.join(resources, "plugins"), path.join(installRoot, "resources", "plugins"), { recursive: true });
   await cp(path.join(desktop, "launcher.cjs"), path.join(installRoot, "resources", "app", "launcher.cjs"));
-  await writeDesktopPackageJson(path.join(installRoot, "resources", "app", "package.json"), upstream);
+  await writeDesktopPackageJson(path.join(installRoot, "resources", "app", "package.json"), vendorApp);
 
-  const control = (await readFile(path.join(desktop, "packaging", "control"), "utf8"))
-    .replace(/^Version: .*$/m, `Version: ${packageVersion}`)
-    .replace(/^Architecture: .*$/m, `Architecture: ${upstream.debian.architecture}`);
+  const control = (await readFile(path.join(desktop, "packaging", "control.template"), "utf8"))
+    .replace("@PACKAGE_VERSION@", packageVersion)
+    .replace("@ARCHITECTURE@", architecture);
   await writeFile(path.join(packageRoot, "DEBIAN", "control"), control);
   await cp(path.join(desktop, "packaging", "codex-desktop"), path.join(packageRoot, "usr", "bin", "codex-desktop"));
   await cp(path.join(desktop, "packaging", "codex-desktop.desktop"), path.join(packageRoot, "usr", "share", "applications", "codex-desktop.desktop"));
@@ -221,36 +227,41 @@ async function main(): Promise<void> {
   if (checksum !== upstream.dmgSha256) {
     throw new Error(`Unsupported DMG SHA-256: ${checksum}\nExpected: ${upstream.dmgSha256}`);
   }
-  console.log(`Supported upstream: ${upstream.version} (build ${upstream.build}, port revision ${upstream.portRevision})`);
-  console.log(`DMG SHA-256: ${checksum}`);
+  console.log(`DMG matches this checkout: ${checksum}`);
   if (options.command === "inspect") return;
   if (process.platform !== "linux" || process.arch !== "x64") throw new Error("Building currently requires Linux x86-64");
 
   console.log("Installing pinned Linux build dependencies…");
   await run("npm", ["ci", "--prefix", desktop]);
+  const electron = await desktopElectronVersion();
 
   const workRoot = path.join(options.work, checksum.slice(0, 16));
   await rm(workRoot, { recursive: true, force: true });
   await mkdir(workRoot, { recursive: true });
+  const stop = async (code: number) => { await rm(workRoot, { recursive: true, force: true }); process.exit(code); };
+  const interrupt = () => void stop(130); const terminate = () => void stop(143);
+  process.once("SIGINT", interrupt); process.once("SIGTERM", terminate);
   try {
-    const app = await extract(options.dmg, workRoot, upstream);
-    await rebuildNativeModules(app, upstream);
-    const deb = await assembleDeb(app, path.join(workRoot, "package"), options.output, upstream);
+    const { app, release } = await extract(options.dmg, workRoot, upstream);
+    console.log(`Upstream release: ${release.version} (build ${release.build}, port revision ${upstream.portRevision})`);
+    await rebuildNativeModules(app, upstream, electron);
+    const deb = await assembleDeb(app, path.join(workRoot, "package"), options.output, upstream, release);
     const report = {
       createdAt: new Date().toISOString(),
-      upstreamVersion: upstream.version,
-      buildNumber: upstream.build,
+      upstreamVersion: release.version,
+      buildNumber: release.build,
       portRevision: upstream.portRevision,
       dmgSha256: checksum,
       deb: path.basename(deb),
       debSha256: await sha256(deb),
-      electron: upstream.electron.linux,
-      nativeModules: upstream.nativeModules,
+      electron,
+      nativeModules: Object.keys(upstream.nativeArtifacts),
     };
     await writeFile(`${deb}.build.json`, `${JSON.stringify(report, null, 2)}\n`);
     console.log(`Built ${deb}`);
     console.log(`SHA-256: ${report.debSha256}`);
   } finally {
+    process.off("SIGINT", interrupt); process.off("SIGTERM", terminate);
     if (!options.keepWork) await rm(workRoot, { recursive: true, force: true });
     else console.log(`Kept work directory: ${workRoot}`);
   }

@@ -1,27 +1,17 @@
 {
   "name": "chatgpt-linux-desktop-runtime",
   "private": true,
-  "version": "26.727.40816",
-  "description": "Experimental compatibility launcher for inspecting the Codex desktop client on Debian",
-  "main": "launcher.cjs",
-  "productName": "Codex",
-  "codexBuildFlavor": "prod",
-  "codexBuildNumber": "6067",
-  "codexAppBrand": "chatgpt",
-  "codexSparkleFeedUrl": "https://persistent.oaistatic.com/codex-app-prod/appcast.xml",
-  "codexSparklePublicKey": "mNfr1v9t63BfgDtlw4C8lRvSY6uMggIXABDOCi3tS6k=",
+  "version": "0.0.0",
+  "description": "Build dependencies and tests for the packaged Linux desktop runtime",
   "scripts": {
-    "start": "electron launcher.cjs",
     "test": "node --test tests/native-boundaries.test.mjs tests/port-smoke.test.mjs",
     "test:live": "CODEX_LIVE_TEST=1 node --test tests/live-turn.test.mjs"
   },
-  "dependencies": {
+  "devDependencies": {
     "@electron/rebuild": "^4.2.0",
     "better-sqlite3": "^12.9.0",
     "electron": "41.10.3",
-    "node-pty": "^1.1.0"
-  },
-  "devDependencies": {
+    "node-pty": "^1.1.0",
     "playwright-core": "^1.61.1"
   }
 }
