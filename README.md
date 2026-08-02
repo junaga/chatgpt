@@ -25,6 +25,22 @@ runtime state, and `node_modules` are deliberately excluded from Git. A local
 checkout therefore does not contain enough material to build the package until
 the upstream app has been acquired and extracted for legitimate local analysis.
 
+## Upstream version tags
+
+Compatibility work is versioned against the upstream DMG rather than assumed to
+work unchanged with every ChatGPT release. Tags use
+`upstream-<dmg-version>`, for example `upstream-26.727.40816`.
+
+Each tag identifies the launcher, packaging logic, tests, and findings verified
+for that DMG version. The matching DMG checksum remains authoritative because
+the download URL itself may be reused for a newer build. A tag does not include
+or redistribute the DMG, extracted application, or generated Debian package.
+
+When porting another upstream release, create a commit containing its verified
+metadata and compatibility changes, run the port tests, and tag that commit with
+its exact DMG version. Port-specific packaging revisions can remain in the
+Debian revision suffix without pretending they are new upstream versions.
+
 ## What is tested
 
 `npm test` under `linux-port/` starts the installed Debian application with a
