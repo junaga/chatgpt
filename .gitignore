@@ -1,6 +1,8 @@
 /original/
 /extracted/
 /dist/
+/.work/
+/node_modules/
 /linux-port/node_modules/
 /linux-port/state/
 .DS_Store

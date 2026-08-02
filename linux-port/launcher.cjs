@@ -2,6 +2,7 @@ const { app } = require("electron");
 const path = require("node:path");
 const os = require("node:os");
 const fs = require("node:fs");
+const portPackage = require("./package.json");
 
 const analysisRoot = path.resolve(__dirname, "..");
 const packagedVendorApp = path.join(__dirname, "vendor-app");
@@ -18,7 +19,7 @@ if (process.env.CODEX_DESKTOP_DEBUG_PORT) {
   app.commandLine.appendSwitch("remote-debugging-port", process.env.CODEX_DESKTOP_DEBUG_PORT);
 }
 app.setName("ChatGPT (Linux Compat)");
-app.setVersion("26.727.40816");
+app.setVersion(portPackage.version);
 Object.defineProperty(app, "isPackaged", { value: true });
 process.env.CODEX_HOME ||=
   process.env.CODEX_DESKTOP_ISOLATED_STATE === "1"
@@ -29,7 +30,7 @@ process.env.CODEX_CLI_PATH = linuxCodex;
 process.env.CODEX_DESKTOP_CODEX_PATH = linuxCodex;
 process.env.ELECTRON_IS_DEV = "0";
 process.env.BUILD_FLAVOR = "prod";
-process.env.CODEX_BUILD_NUMBER = "6067";
+process.env.CODEX_BUILD_NUMBER = portPackage.codexBuildNumber;
 process.env.NODE_ENV = "production";
 
 if (process.env.CODEX_DESKTOP_ISOLATED_STATE === "1") {
