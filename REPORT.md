@@ -115,9 +115,3 @@ and KDE Wayland/X11 sessions; PipeWire audio; D-Bus notifications; an SSH test
 host; a browser test profile; suspend/resume testing; and hardware/software GPU
 coverage. Tests that consume model usage or change remote account state should
 be opt-in.
-
-## Extracted paths
-
-- Application bundle: `extracted/ChatGPT Installer/ChatGPT.app`
-- Unpacked Electron ASAR: `extracted/app-asar`
-- Reports and generated inventories: `reports/`
