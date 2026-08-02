@@ -1,11 +1,29 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import net from "node:net";
+import os from "node:os";
+import path from "node:path";
 import { chromium } from "playwright-core";
 
 const packageRoot = process.env.CODEX_DESKTOP_PACKAGE_ROOT;
 const executable = process.env.CODEX_DESKTOP_EXECUTABLE ||
   (packageRoot ? `${packageRoot}/codex-desktop` : "/usr/bin/codex-desktop");
+
+export async function createTestWorkspace(prefix) {
+  const root = await mkdtemp(path.join(os.tmpdir(), prefix));
+  const project = path.join(root, "project");
+  const init = spawnSync("git", ["init", "--quiet", project], { encoding: "utf8" });
+  assert.equal(init.status, 0, init.stderr);
+  await writeFile(path.join(project, "README.md"), "# Disposable port test fixture\n");
+  return {
+    root,
+    project,
+    userData: path.join(root, "electron-profile"),
+    codexHome: path.join(root, "codex-home"),
+    remove: () => rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }),
+  };
+}
 
 async function reservePort() {
   const server = net.createServer();

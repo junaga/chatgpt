@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
-import os from "node:os";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
-import { launchPackagedApp, terminate, waitForLog } from "./helpers/app-driver.mjs";
+import { createTestWorkspace, launchPackagedApp, terminate, waitForLog } from "./helpers/app-driver.mjs";
 
 const startupTimeout = Number(process.env.CODEX_DESKTOP_TEST_TIMEOUT || 60_000);
 const packageRoot = process.env.CODEX_DESKTOP_PACKAGE_ROOT || "/opt/codex-desktop-linux";
@@ -18,22 +16,18 @@ test("packaged Linux app starts, mounts its renderer, and opens a Git project", 
     assert.equal(sandbox.mode & 0o4777, 0o4755, "Installed Chromium sandbox must be setuid and executable");
   }
 
-  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "chatgpt-linux-test-"));
-  const project = path.join(temporaryRoot, "project");
-  const userData = path.join(temporaryRoot, "electron-profile");
-  const codexHome = path.join(temporaryRoot, "codex-home");
-  await writeFile(path.join(temporaryRoot, "placeholder"), "");
-  const init = spawnSync("git", ["init", "--quiet", project], { encoding: "utf8" });
-  assert.equal(init.status, 0, init.stderr);
-  await writeFile(path.join(project, "README.md"), "# Port smoke-test fixture\n");
+  const workspace = await createTestWorkspace("chatgpt-linux-test-");
 
   const { browser, child, deadline, logs, page } = await launchPackagedApp({
-    project, userData, codexHome, timeout: startupTimeout,
+    project: workspace.project,
+    userData: workspace.userData,
+    codexHome: workspace.codexHome,
+    timeout: startupTimeout,
   });
 
   t.after(async () => {
     await terminate(child);
-    await rm(temporaryRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    await workspace.remove();
   });
 
   await waitForLog(logs, /app routes mounted/, deadline);
@@ -42,5 +36,5 @@ test("packaged Linux app starts, mounts its renderer, and opens a Git project", 
   assert.match(page.url(), /^app:\/\/-\/index\.html/);
   assert.equal(await page.locator("#root").count(), 1);
   assert.equal(child.spawnargs.includes("--no-sandbox"), false);
-  assert.ok(child.spawnargs.includes(project));
+  assert.ok(child.spawnargs.includes(workspace.project));
 });

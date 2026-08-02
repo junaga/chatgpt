@@ -1,0 +1,16 @@
+*
+!package.json
+!package-lock.json
+!desktop/package.json
+!desktop/package-lock.json
+!desktop/launcher.cjs
+!desktop/packaging/
+!desktop/packaging/**
+!desktop/tests/
+!desktop/tests/**
+!src/
+!src/**
+!test/container/
+!test/container/**
+!tsconfig.json
+!upstream.json

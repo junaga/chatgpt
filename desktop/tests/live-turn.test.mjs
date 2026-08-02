@@ -1,34 +1,78 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { launchPackagedApp, terminate, waitForLog } from "./helpers/app-driver.mjs";
+import { createTestWorkspace, launchPackagedApp, terminate, waitForLog } from "./helpers/app-driver.mjs";
 
 const enabled = process.env.CODEX_LIVE_TEST === "1";
 const timeout = Number(process.env.CODEX_LIVE_TEST_TIMEOUT || 300_000);
 
-test("authenticated app completes a file edit through the Linux Codex backend", {
-  skip: enabled ? false : "set CODEX_LIVE_TEST=1; this test consumes account usage and creates a remote thread",
-  timeout: timeout + 10_000,
-}, async t => {
-  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "chatgpt-linux-live-"));
-  const project = path.join(temporaryRoot, "project");
-  const userData = path.join(temporaryRoot, "electron-profile");
-  const outputPath = path.join(project, "port-live-test.txt");
-  const codexHome = process.env.CODEX_LIVE_CODEX_HOME || path.join(os.homedir(), ".codex");
-  const init = spawnSync("git", ["init", "--quiet", project], { encoding: "utf8" });
-  assert.equal(init.status, 0, init.stderr);
-  await writeFile(path.join(project, "README.md"), "# Disposable live port test\n");
+async function archiveAndDeleteCurrentChat(page, label) {
+  const actions = page.getByRole("button", { name: "Chat actions", exact: true });
+  await actions.click();
+  await page.getByRole("menuitem", { name: "Rename chat", exact: true }).click();
+  const renameDialog = page.getByRole("dialog");
+  const title = renameDialog.getByRole("textbox");
+  await title.fill(label);
+  await renameDialog.getByRole("button", { name: /rename|save/i }).click();
+  await renameDialog.waitFor({ state: "hidden" });
 
-  const app = await launchPackagedApp({ project, userData, codexHome, timeout: 60_000 });
+  await actions.click();
+  await page.getByRole("menuitem", { name: "Archive chat", exact: true }).click();
+  const archiveDialog = page.getByRole("dialog");
+  await archiveDialog.getByRole("button", { name: "Archive", exact: true }).click();
+  await archiveDialog.waitFor({ state: "hidden" });
+
+  const settings = page.getByRole("link", { name: "Settings", exact: true }).last();
+  await settings.click();
+  const search = page.getByPlaceholder("Search archived chats");
+  await search.waitFor({ state: "visible" });
+  await search.fill(label);
+
+  const deleteButton = page.getByRole("button", { name: "Delete archived chat", exact: true });
+  await deleteButton.click();
+  const deleteDialog = page.getByRole("dialog");
+  await deleteDialog.getByRole("button", { name: "Delete", exact: true }).click();
+  await deleteDialog.waitFor({ state: "hidden" });
+  await deleteButton.waitFor({ state: "detached" });
+}
+
+test("authenticated app completes a file edit through the Linux Codex backend", {
+  skip: enabled ? false : "set CODEX_LIVE_TEST=1; this test consumes account usage and creates then deletes a remote thread",
+  timeout: timeout + 90_000,
+}, async t => {
+  const workspace = await createTestWorkspace("chatgpt-linux-live-");
+  const outputPath = path.join(workspace.project, "port-live-test.txt");
+  const threadLabel = `chatgpt-linux live test ${Date.now()}`;
+  const codexHome = process.env.CODEX_LIVE_CODEX_HOME || path.join(os.homedir(), ".codex");
+
+  const app = await launchPackagedApp({
+    project: workspace.project,
+    userData: workspace.userData,
+    codexHome,
+    timeout: 60_000,
+  });
+  let threadCreated = false;
   t.after(async () => {
-    await terminate(app.child);
-    if (process.env.CODEX_LIVE_KEEP_ARTIFACTS !== "1") {
-      await rm(temporaryRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
-    } else {
-      console.error(`Kept live-test project at ${temporaryRoot}`);
+    try {
+      if (threadCreated && process.env.CODEX_LIVE_KEEP_THREAD !== "1") {
+        await archiveAndDeleteCurrentChat(app.page, threadLabel);
+      }
+    } catch (error) {
+      throw new Error(
+        `The live-test thread could not be deleted. Set CODEX_LIVE_KEEP_ARTIFACTS=1 ` +
+        `and rerun to inspect the UI.\n${app.logs().slice(-4_000)}`,
+        { cause: error },
+      );
+    } finally {
+      await terminate(app.child);
+      if (process.env.CODEX_LIVE_KEEP_ARTIFACTS !== "1") {
+        await workspace.remove();
+      } else {
+        console.error(`Kept live-test project at ${workspace.root}`);
+      }
     }
   });
   await waitForLog(app.logs, /app routes mounted/, app.deadline);
@@ -49,6 +93,7 @@ test("authenticated app completes a file edit through the Linux Codex backend", 
   const send = app.page.locator('button[aria-label*="send" i]:visible').last();
   if (await send.count()) await send.click();
   else await composer.press("Enter");
+  threadCreated = true;
 
   const deadline = Date.now() + timeout;
   let actual;
@@ -66,7 +111,7 @@ test("authenticated app completes a file edit through the Linux Codex backend", 
   assert.equal(actual?.trim(), expected, `The expected edit did not complete.\n${app.logs().slice(-4_000)}`);
 
   const status = spawnSync("git", ["status", "--short", "--", "port-live-test.txt"], {
-    cwd: project,
+    cwd: workspace.project,
     encoding: "utf8",
   });
   assert.equal(status.status, 0, status.stderr);

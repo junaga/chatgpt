@@ -42,6 +42,16 @@ A neighboring `.deb.build.json` records the input and output hashes. Package
 bytes are not claimed to be reproducible across machines because archive
 timestamps and external tool versions are not normalized.
 
+Native modules inherit the C library baseline of the build host. For a package
+that runs on Debian 12 or newer, build in the pinned Bookworm container:
+
+```bash
+npm run port:container
+```
+
+This reads `original/ChatGPT.dmg` and writes to `dist/` by default. Override
+those paths with `CODEX_DESKTOP_DMG` and `CODEX_DESKTOP_OUTPUT`.
+
 The DMG, extracted application, generated package, build workspace, runtime
 state, and `node_modules` are deliberately excluded from Git.
 
@@ -113,6 +123,42 @@ creates a remote conversation:
 ```bash
 npm run test:live
 ```
+
+### Containerized runtime test
+
+The generated package can be tested in a clean Debian userspace with Xvfb. This
+is a reproducible check of package dependencies, Electron startup, the renderer,
+SQLite, PTY handling, and the Linux Codex app-server boundary:
+
+```bash
+npm run test:container
+```
+
+If `dist/` contains more than one package, select one explicitly:
+
+```bash
+CODEX_DESKTOP_DEB="$PWD/dist/codex-desktop-linux_26.727.40816-2_amd64.deb" \
+  npm run test:container
+```
+
+The account-backed test is also available in the container:
+
+```bash
+npm run test:container:live
+```
+
+Live mode mounts `$HOME/.codex` read-only, copies it into the disposable
+container, submits one real model turn, then archives and permanently deletes
+the test thread through the app. Usage cannot be recovered. Cleanup failure
+fails the test instead of being hidden. Set `CODEX_LIVE_KEEP_THREAD=1` to retain
+the thread deliberately, or `CODEX_LIVE_CODEX_HOME` to use another authenticated
+profile. The image pins the Codex CLI version verified by this checkout.
+
+A container does **not** validate integration with the host desktop. Deep-link
+registration, D-Bus notifications, PipeWire audio, browser pairing, keyring
+behavior, Wayland/X11 differences, GPU behavior, and suspend/resume still need
+host-level tests. Playwright remains the UI driver; filesystem, process, SQLite,
+and PTY assertions provide external evidence for the boundaries tested here.
 
 ## Known gaps
 

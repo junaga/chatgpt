@@ -8,10 +8,13 @@
   },
   "scripts": {
     "port": "tsx src/cli.ts",
+    "port:container": "./scripts/build-container.sh",
     "test": "npm run typecheck && npm run test:tool",
     "test:tool": "tsx --test test/*.test.ts",
     "test:installed": "npm test --prefix desktop",
     "test:live": "npm run test:live --prefix desktop",
+    "test:container": "./scripts/test-container.sh local",
+    "test:container:live": "./scripts/test-container.sh live",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
