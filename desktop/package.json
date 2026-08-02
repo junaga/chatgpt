@@ -1,5 +1,5 @@
 {
-  "name": "codex-desktop-linux-compat",
+  "name": "chatgpt-linux-desktop-runtime",
   "private": true,
   "version": "26.727.40816",
   "description": "Experimental compatibility launcher for inspecting the Codex desktop client on Debian",

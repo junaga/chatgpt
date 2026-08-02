@@ -23,7 +23,7 @@ app.setVersion(portPackage.version);
 Object.defineProperty(app, "isPackaged", { value: true });
 process.env.CODEX_HOME ||=
   process.env.CODEX_DESKTOP_ISOLATED_STATE === "1"
-    ? path.join(analysisRoot, "linux-port", "state", "codex-home")
+    ? path.join(analysisRoot, "desktop", "state", "codex-home")
     : path.join(os.homedir(), ".codex");
 process.env.CODEX_INSTALL_DIR ||= path.dirname(linuxCodex);
 process.env.CODEX_CLI_PATH = linuxCodex;
@@ -34,7 +34,7 @@ process.env.CODEX_BUILD_NUMBER = portPackage.codexBuildNumber;
 process.env.NODE_ENV = "production";
 
 if (process.env.CODEX_DESKTOP_ISOLATED_STATE === "1") {
-  app.setPath("userData", path.join(analysisRoot, "linux-port", "state", "electron-user-data"));
+  app.setPath("userData", path.join(analysisRoot, "desktop", "state", "electron-user-data"));
 }
 
 if (process.env.CODEX_DESKTOP_DEBUG_PORT) {

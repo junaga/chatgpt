@@ -5,10 +5,11 @@ import { access, chmod, cp, mkdir, readFile, rename, rm, symlink, writeFile } fr
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { findManifest, sha256, type PortManifest } from "./manifest.ts";
+import { loadUpstream, sha256, type UpstreamRelease } from "./upstream.ts";
 
 const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const manifestsDirectory = path.join(repository, "port", "manifests");
+const upstreamFile = path.join(repository, "upstream.json");
+const desktop = path.join(repository, "desktop");
 
 interface Options {
   command: "inspect" | "build";
@@ -86,33 +87,33 @@ async function requireFile(file: string, description: string): Promise<void> {
   }
 }
 
-async function validateExtractedApp(app: string, manifest: PortManifest): Promise<void> {
+async function validateExtractedApp(app: string, upstream: UpstreamRelease): Promise<void> {
   const resources = path.join(app, "Contents", "Resources");
   const packageJson = JSON.parse(await readFile(path.join(resources, "app.asar.extracted", "package.json"), "utf8"));
-  if (packageJson.version !== manifest.upstreamVersion) {
-    throw new Error(`Renderer version ${packageJson.version} does not match manifest ${manifest.upstreamVersion}`);
+  if (packageJson.version !== upstream.version) {
+    throw new Error(`Renderer version ${packageJson.version} does not match supported upstream ${upstream.version}`);
   }
-  if (String(packageJson.codexBuildNumber) !== manifest.buildNumber) {
-    throw new Error(`Renderer build ${packageJson.codexBuildNumber} does not match manifest ${manifest.buildNumber}`);
+  if (String(packageJson.codexBuildNumber) !== upstream.build) {
+    throw new Error(`Renderer build ${packageJson.codexBuildNumber} does not match supported upstream ${upstream.build}`);
   }
-  for (const module of manifest.nativeModules) {
+  for (const module of upstream.nativeModules) {
     await requireFile(path.join(resources, "app.asar.extracted", "node_modules", module, "package.json"), `Native module ${module}`);
   }
   await requireFile(path.join(resources, "plugins"), "Bundled plugins");
   await requireFile(path.join(resources, "icon-chatgpt.png"), "Application icon");
 }
 
-async function extract(dmg: string, root: string, manifest: PortManifest): Promise<string> {
+async function extract(dmg: string, root: string, upstream: UpstreamRelease): Promise<string> {
   const extracted = path.join(root, "dmg");
   await mkdir(extracted, { recursive: true });
   const extraction = await run("7z", ["x", dmg, `-o${extracted}`, "-y"], {
     capture: true,
     allowedExitCodes: [0, 2],
   });
-  const app = path.join(extracted, manifest.appRelativePath);
+  const app = path.join(extracted, upstream.appPath);
   if (extraction.code === 2) {
     const errors = extraction.output.split("\n").filter(line => line.startsWith("ERROR:"));
-    const expected = new Set(Object.keys(manifest.skippedSymlinks).map(link => `${manifest.appRelativePath}/${link}`));
+    const expected = new Set(Object.keys(upstream.skippedSymlinks).map(link => `${upstream.appPath}/${link}`));
     const actual = new Set<string>();
     for (const error of errors) {
       const match = error.match(/^ERROR: Dangerous link path was ignored : (.+?) : /);
@@ -121,10 +122,10 @@ async function extract(dmg: string, root: string, manifest: PortManifest): Promi
     }
     if (actual.size !== expected.size) throw new Error("DMG extraction did not report the expected skipped symlinks");
   }
-  for (const [relativeLink, target] of Object.entries(manifest.skippedSymlinks)) {
+  for (const [relativeLink, target] of Object.entries(upstream.skippedSymlinks)) {
     const link = path.join(app, relativeLink);
     const resolvedTarget = path.resolve(path.dirname(link), target);
-    if (!resolvedTarget.startsWith(`${app}${path.sep}`)) throw new Error(`Unsafe symlink target in manifest: ${relativeLink}`);
+    if (!resolvedTarget.startsWith(`${app}${path.sep}`)) throw new Error(`Unsafe symlink target in upstream metadata: ${relativeLink}`);
     await requireFile(resolvedTarget, `Symlink target for ${relativeLink}`);
     await mkdir(path.dirname(link), { recursive: true });
     try {
@@ -138,26 +139,25 @@ async function extract(dmg: string, root: string, manifest: PortManifest): Promi
   const vendorApp = path.join(resources, "app.asar.extracted");
   const asar = path.join(repository, "node_modules", ".bin", "asar");
   await run(asar, ["extract", path.join(resources, "app.asar"), vendorApp]);
-  await validateExtractedApp(app, manifest);
+  await validateExtractedApp(app, upstream);
   return app;
 }
 
-async function rebuildNativeModules(app: string, manifest: PortManifest): Promise<void> {
+async function rebuildNativeModules(app: string, upstream: UpstreamRelease): Promise<void> {
   const vendorApp = path.join(app, "Contents", "Resources", "app.asar.extracted");
-  const portRoot = path.join(repository, "linux-port");
-  const rebuild = path.join(repository, "linux-port", "node_modules", ".bin", "electron-rebuild");
-  await requireFile(rebuild, "electron-rebuild (run npm ci in linux-port)");
+  const rebuild = path.join(desktop, "node_modules", ".bin", "electron-rebuild");
+  await requireFile(rebuild, "electron-rebuild");
   await run(rebuild, [
     "--force",
-    "--version", manifest.electron.linuxCompatibility,
+    "--version", upstream.electron.linux,
     "--arch", "x64",
     "--platform", "linux",
-    "--module-dir", portRoot,
-    "--only", manifest.nativeModules.join(","),
+    "--module-dir", desktop,
+    "--only", upstream.nativeModules.join(","),
   ]);
-  for (const module of manifest.nativeModules) {
-    for (const artifact of manifest.nativeArtifacts[module]) {
-      const source = path.join(portRoot, "node_modules", module, artifact);
+  for (const module of upstream.nativeModules) {
+    for (const artifact of upstream.nativeArtifacts[module]) {
+      const source = path.join(desktop, "node_modules", module, artifact);
       const destination = path.join(vendorApp, "node_modules", module, artifact);
       await requireFile(source, `Rebuilt artifact ${module}/${artifact}`);
       await mkdir(path.dirname(destination), { recursive: true });
@@ -166,17 +166,17 @@ async function rebuildNativeModules(app: string, manifest: PortManifest): Promis
   }
 }
 
-async function writePortPackageJson(destination: string, manifest: PortManifest): Promise<void> {
-  const source = JSON.parse(await readFile(path.join(repository, "linux-port", "package.json"), "utf8"));
-  source.version = manifest.upstreamVersion;
-  source.codexBuildNumber = manifest.buildNumber;
-  source.dependencies.electron = manifest.electron.linuxCompatibility;
+async function writeDesktopPackageJson(destination: string, upstream: UpstreamRelease): Promise<void> {
+  const source = JSON.parse(await readFile(path.join(desktop, "package.json"), "utf8"));
+  source.version = upstream.version;
+  source.codexBuildNumber = upstream.build;
+  source.dependencies.electron = upstream.electron.linux;
   await writeFile(destination, `${JSON.stringify(source, null, 2)}\n`);
 }
 
-async function assembleDeb(app: string, buildRoot: string, output: string, manifest: PortManifest): Promise<string> {
-  const packageVersion = `${manifest.upstreamVersion}-${manifest.debianRevision}`;
-  const packageBase = `codex-desktop-linux_${packageVersion}_${manifest.architecture}`;
+async function assembleDeb(app: string, buildRoot: string, output: string, upstream: UpstreamRelease): Promise<string> {
+  const packageVersion = `${upstream.version}-${upstream.debian.revision}`;
+  const packageBase = `codex-desktop-linux_${packageVersion}_${upstream.debian.architecture}`;
   const packageRoot = path.join(buildRoot, packageBase);
   const installRoot = path.join(packageRoot, "opt", "codex-desktop-linux");
   const resources = path.join(app, "Contents", "Resources");
@@ -189,19 +189,19 @@ async function assembleDeb(app: string, buildRoot: string, output: string, manif
     mkdir(output, { recursive: true }),
   ]);
 
-  await cp(path.join(repository, "linux-port", "node_modules", "electron", "dist"), installRoot, { recursive: true });
+  await cp(path.join(desktop, "node_modules", "electron", "dist"), installRoot, { recursive: true });
   await rename(path.join(installRoot, "electron"), path.join(installRoot, "codex-desktop"));
   await cp(path.join(resources, "app.asar.extracted"), path.join(installRoot, "resources", "app", "vendor-app"), { recursive: true });
   await cp(path.join(resources, "plugins"), path.join(installRoot, "resources", "plugins"), { recursive: true });
-  await cp(path.join(repository, "linux-port", "launcher.cjs"), path.join(installRoot, "resources", "app", "launcher.cjs"));
-  await writePortPackageJson(path.join(installRoot, "resources", "app", "package.json"), manifest);
+  await cp(path.join(desktop, "launcher.cjs"), path.join(installRoot, "resources", "app", "launcher.cjs"));
+  await writeDesktopPackageJson(path.join(installRoot, "resources", "app", "package.json"), upstream);
 
-  const control = (await readFile(path.join(repository, "linux-port", "packaging", "control"), "utf8"))
+  const control = (await readFile(path.join(desktop, "packaging", "control"), "utf8"))
     .replace(/^Version: .*$/m, `Version: ${packageVersion}`)
-    .replace(/^Architecture: .*$/m, `Architecture: ${manifest.architecture}`);
+    .replace(/^Architecture: .*$/m, `Architecture: ${upstream.debian.architecture}`);
   await writeFile(path.join(packageRoot, "DEBIAN", "control"), control);
-  await cp(path.join(repository, "linux-port", "packaging", "codex-desktop"), path.join(packageRoot, "usr", "bin", "codex-desktop"));
-  await cp(path.join(repository, "linux-port", "packaging", "codex-desktop.desktop"), path.join(packageRoot, "usr", "share", "applications", "codex-desktop.desktop"));
+  await cp(path.join(desktop, "packaging", "codex-desktop"), path.join(packageRoot, "usr", "bin", "codex-desktop"));
+  await cp(path.join(desktop, "packaging", "codex-desktop.desktop"), path.join(packageRoot, "usr", "share", "applications", "codex-desktop.desktop"));
   await cp(path.join(resources, "icon-chatgpt.png"), path.join(packageRoot, "usr", "share", "icons", "hicolor", "512x512", "apps", "codex-desktop.png"));
 
   await chmod(path.join(packageRoot, "usr", "bin", "codex-desktop"), 0o755);
@@ -217,31 +217,35 @@ async function main(): Promise<void> {
   await requireFile(options.dmg, "DMG");
   console.log("Hashing DMG…");
   const checksum = await sha256(options.dmg);
-  const manifest = await findManifest(manifestsDirectory, checksum);
-  console.log(`Supported upstream: ${manifest.upstreamVersion} (build ${manifest.buildNumber})`);
+  const upstream = await loadUpstream(upstreamFile);
+  if (checksum !== upstream.dmgSha256) {
+    throw new Error(`Unsupported DMG SHA-256: ${checksum}\nExpected: ${upstream.dmgSha256}`);
+  }
+  console.log(`Supported upstream: ${upstream.version} (build ${upstream.build}, port revision ${upstream.portRevision})`);
   console.log(`DMG SHA-256: ${checksum}`);
   if (options.command === "inspect") return;
   if (process.platform !== "linux" || process.arch !== "x64") throw new Error("Building currently requires Linux x86-64");
 
   console.log("Installing pinned Linux build dependencies…");
-  await run("npm", ["ci", "--prefix", path.join(repository, "linux-port")]);
+  await run("npm", ["ci", "--prefix", desktop]);
 
   const workRoot = path.join(options.work, checksum.slice(0, 16));
   await rm(workRoot, { recursive: true, force: true });
   await mkdir(workRoot, { recursive: true });
   try {
-    const app = await extract(options.dmg, workRoot, manifest);
-    await rebuildNativeModules(app, manifest);
-    const deb = await assembleDeb(app, path.join(workRoot, "package"), options.output, manifest);
+    const app = await extract(options.dmg, workRoot, upstream);
+    await rebuildNativeModules(app, upstream);
+    const deb = await assembleDeb(app, path.join(workRoot, "package"), options.output, upstream);
     const report = {
       createdAt: new Date().toISOString(),
-      upstreamVersion: manifest.upstreamVersion,
-      buildNumber: manifest.buildNumber,
+      upstreamVersion: upstream.version,
+      buildNumber: upstream.build,
+      portRevision: upstream.portRevision,
       dmgSha256: checksum,
       deb: path.basename(deb),
       debSha256: await sha256(deb),
-      electron: manifest.electron.linuxCompatibility,
-      nativeModules: manifest.nativeModules,
+      electron: upstream.electron.linux,
+      nativeModules: upstream.nativeModules,
     };
     await writeFile(`${deb}.build.json`, `${JSON.stringify(report, null, 2)}\n`);
     console.log(`Built ${deb}`);

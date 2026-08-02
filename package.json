@@ -1,5 +1,5 @@
 {
-  "name": "chatgpt-linux-port-tool",
+  "name": "chatgpt-linux",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -7,8 +7,11 @@
     "node": ">=22.18"
   },
   "scripts": {
-    "port": "tsx port/cli.ts",
-    "test:port-tool": "tsx --test port/*.test.ts",
+    "port": "tsx src/cli.ts",
+    "test": "npm run typecheck && npm run test:tool",
+    "test:tool": "tsx --test test/*.test.ts",
+    "test:installed": "npm test --prefix desktop",
+    "test:live": "npm run test:live --prefix desktop",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
