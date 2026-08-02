@@ -41,9 +41,9 @@ test("authenticated app completes a file edit through the Linux Codex backend", 
     throw new Error(`No authenticated composer became visible. UI text:\n${text}`, { cause: error });
   }
 
-  const expected = "chatgpt-linux live port test passed";
+  const expected = "chatgpt-linux live port test passed.";
   await composer.fill(
-    `Create a file named port-live-test.txt in the current project containing exactly: ${expected}. ` +
+    `Create a file named port-live-test.txt in the current project containing exactly this one line: "${expected}" ` +
     "Do not modify any other file and do not run shell commands.",
   );
   const send = app.page.locator('button[aria-label*="send" i]:visible').last();

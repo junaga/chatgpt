@@ -75,6 +75,8 @@ Verified runtime milestones:
 - app-server state becomes connected;
 - IPC router listens on `$CODEX_HOME/ipc/ipc.sock`;
 - the production renderer mounts its application routes;
+- an authenticated model turn submitted through the packaged renderer completes
+  and creates the exact requested file in a disposable Git repository;
 - the installed Linux `better-sqlite3` build writes and reopens a database in
   separate Electron processes;
 - the installed Linux `node-pty` build streams child output, preserves a
@@ -90,15 +92,15 @@ with Chromium's sandbox enabled, completes authenticated ChatGPT requests, loads
 projects and recent threads, reconciles bundled plugins, and initializes
 browser-use IPC.
 
-These results do not demonstrate feature completeness. No full agent turn has
-yet been submitted by the automated packaged-UI test; that usage-consuming test
-is available only as an explicit opt-in. Voice, notifications, shortcuts, deep
-links, automations, SSH, browser-extension pairing, account lifecycle, and
-update behavior remain untested. The browser Node-REPL backend reports a missing
-runtime component. Computer use, Apple Events, Objective-C helpers, macOS
-permissions, and Sparkle cannot work as packaged because their implementations
-are macOS-native. The upstream Electron 41 compatibility runtime may also differ
-from OpenAI's customized Electron 42 runtime.
+These results do not demonstrate feature completeness. The automated packaged-
+UI turn test passed on 2026-08-02 but remains an explicit opt-in because it uses
+account quota and creates a remote conversation. Voice, notifications,
+shortcuts, deep links, automations, SSH, browser-extension pairing, account
+lifecycle, and update behavior remain untested. The browser Node-REPL backend
+reports a missing runtime component. Computer use, Apple Events, Objective-C
+helpers, macOS permissions, and Sparkle cannot work as packaged because their
+implementations are macOS-native. The upstream Electron 41 compatibility
+runtime may also differ from OpenAI's customized Electron 42 runtime.
 
 A credible release test requires disposable-repository scenarios; real GNOME
 and KDE Wayland/X11 sessions; PipeWire audio; D-Bus notifications; an SSH test

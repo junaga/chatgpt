@@ -38,12 +38,13 @@ prompts.
 An explicit `npm run test:live` test can submit one authenticated turn against a
 disposable repository and verify its exact file edit. It consumes account usage
 and creates a remote thread, so it is intentionally excluded from `npm test`.
+The test passed against the installed package on 2026-08-02.
 
 ## Known gaps
 
 macOS-native computer-use services, Apple Events, Objective-C bridges,
-permission helpers, and Sparkle updates are not ported. Agent turns and edits,
-approvals, PTY behavior, voice/audio, notifications, deep links, automations,
-SSH projects, browser pairing, account lifecycle, and update behavior still
-need explicit end-to-end coverage. Some of those tests require account usage,
-real desktop services, or external infrastructure and should remain opt-in.
+permission helpers, and Sparkle updates are not ported. Approval UI, voice/audio,
+notifications, deep links, automations, SSH projects, browser pairing, account
+lifecycle, and update behavior still need explicit end-to-end coverage. Some of
+those tests require account usage, real desktop services, or external
+infrastructure and should remain opt-in.

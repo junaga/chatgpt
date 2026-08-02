@@ -18,15 +18,16 @@ sandbox. Verified working:
 - configuration, authentication-status, model, thread, permission-profile,
   plugin, and MCP-status requests
 - authenticated ChatGPT account lookup and API access
+- authenticated model turn and exact file edit in a disposable Git repository
 - bundled production renderer and full desktop UI
 - bundled plugin marketplace reconciliation
 - browser-use native IPC initialization
 
-Not verified end to end: agent turns and edits through the packaged UI, command
-approvals, PTY interaction, voice/audio, notifications, global shortcuts, deep
-links, automations, SSH/remote projects, browser extension pairing, first-time
-login, logout, account expiry, and updates. Browser use initializes, but its
-Node-REPL backend reports a missing runtime component.
+Not verified end to end: command approvals through the packaged UI, voice/audio,
+notifications, global shortcuts, deep links, automations, SSH/remote projects,
+browser extension pairing, first-time login, logout, account expiry, and
+updates. Browser use initializes, but its Node-REPL backend reports a missing
+runtime component.
 
 Computer/desktop use is not ported. The included implementation depends on
 macOS-native services. Apple Events, Objective-C bridges, macOS permission
@@ -91,8 +92,7 @@ npm run test:live
 It uses the current account in `${CODEX_LIVE_CODEX_HOME:-$HOME/.codex}`, creates
 a remote conversation, and consumes model usage. The project and Electron
 profile are temporary. Set `CODEX_LIVE_KEEP_ARTIFACTS=1` to retain the local
-fixture after a failure. This test exists but has not yet been executed in this
-analysis, so a passing result is not claimed here.
+fixture after a failure. It passed against the installed package on 2026-08-02.
 
 ## Testing needed
 
