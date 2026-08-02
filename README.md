@@ -4,10 +4,12 @@ An experimental Debian compatibility port of the ChatGPT Codex macOS desktop
 app. This is an independent research project, not an OpenAI product or supported
 Linux release.
 
-The current checkout supports exactly one upstream DMG. Its version, build,
-checksum, runtime versions, native artifacts, and extraction exceptions are in
-[`upstream.json`](upstream.json). Git history—not a runtime strategy registry—
-preserves support for older upstream releases.
+The current checkout supports exactly one upstream DMG. [`upstream.json`](upstream.json)
+contains only values the build cannot derive: its checksum, port revision,
+extraction path, native artifact destinations, and accepted extraction warnings.
+The upstream version and build come from the checksum-verified app; the Linux
+Electron version comes from the pinned desktop workspace. Git history—not a
+runtime strategy registry—preserves support for older releases.
 
 The current port launches the upstream production renderer with stock Linux
 Electron, rebuilt Linux native modules, and the installed Linux Codex CLI. The
@@ -33,8 +35,8 @@ npm run port -- build --dmg ~/Downloads/ChatGPT.dmg
 
 `inspect` hashes the DMG and fails unless it matches `upstream.json`. `build`
 installs pinned desktop dependencies, extracts the DMG and ASAR, validates the
-upstream layout, repairs only the declared safe symlinks, rebuilds the declared
-Electron native modules, and writes the Debian package under `dist/`.
+upstream layout, accepts only the declared extraction warnings, rebuilds the
+declared Electron native modules, and writes the Debian package under `dist/`.
 
 A neighboring `.deb.build.json` records the input and output hashes. Package
 bytes are not claimed to be reproducible across machines because archive
@@ -91,6 +93,16 @@ After installing the generated Debian package, test the compatibility seams:
 
 ```bash
 npm run test:installed
+```
+
+The same tests can target an unpacked package tree without installation. The
+unpacked run uses Chromium's user-namespace sandbox because its sandbox helper
+cannot be root-owned before installation:
+
+```bash
+dpkg-deb -x dist/codex-desktop-linux_*.deb /tmp/chatgpt-linux-package
+CODEX_DESKTOP_PACKAGE_ROOT=/tmp/chatgpt-linux-package/opt/codex-desktop-linux \
+  npm run test:installed
 ```
 
 That suite verifies the sandboxed packaged renderer, SQLite persistence across

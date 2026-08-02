@@ -6,7 +6,8 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-const electron = process.env.CODEX_DESKTOP_ELECTRON || "/opt/codex-desktop-linux/codex-desktop";
+const packageRoot = process.env.CODEX_DESKTOP_PACKAGE_ROOT || "/opt/codex-desktop-linux";
+const electron = process.env.CODEX_DESKTOP_ELECTRON || path.join(packageRoot, "codex-desktop");
 const helper = fileURLToPath(new URL("helpers/native-probe.cjs", import.meta.url));
 
 function probe(arguments_) {

@@ -87,18 +87,19 @@ Verified runtime milestones:
   `linux-x86_64` primary-runtime bundles.
 
 The prototype renders the authenticated production UI under Xvfb and is packaged
-as `codex-desktop-linux_26.727.40816-1_amd64.deb`. The installed package runs
+as `codex-desktop-linux_26.727.40816-2_amd64.deb`. The installed package runs
 with Chromium's sandbox enabled, completes authenticated ChatGPT requests, loads
 projects and recent threads, reconciles bundled plugins, and initializes
 browser-use IPC.
 
 The Debian package was also rebuilt end to end from the untouched, checksum-
 verified DMG using the repository's TypeScript pipeline on 2026-08-02. The
-pipeline extracts the ASAR, explicitly validates and repairs the nine safe
-relative symlinks rejected by 7-Zip, rebuilds the declared Linux Electron native
-artifacts from pinned npm packages, assembles the package, and emits a build
-report. That freshly generated package was installed and passed all four
-automatic port-boundary tests.
+pipeline extracts the ASAR, explicitly validates the nine accepted relative-
+symlink warnings emitted by 7-Zip, rebuilds the declared Linux Electron
+native artifacts from pinned npm packages, assembles the package, and emits a
+build report. The skipped `cua_node` command links are not reconstructed because
+that macOS runtime is not included in the Debian package. The freshly generated
+package was installed and passed all four automatic port-boundary tests.
 
 These results do not demonstrate feature completeness. The automated packaged-
 UI turn test passed on 2026-08-02 but remains an explicit opt-in because it uses

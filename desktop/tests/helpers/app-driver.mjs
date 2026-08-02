@@ -3,7 +3,9 @@ import { spawn } from "node:child_process";
 import net from "node:net";
 import { chromium } from "playwright-core";
 
-const executable = process.env.CODEX_DESKTOP_EXECUTABLE || "/usr/bin/codex-desktop";
+const packageRoot = process.env.CODEX_DESKTOP_PACKAGE_ROOT;
+const executable = process.env.CODEX_DESKTOP_EXECUTABLE ||
+  (packageRoot ? `${packageRoot}/codex-desktop` : "/usr/bin/codex-desktop");
 
 async function reservePort() {
   const server = net.createServer();
@@ -39,7 +41,8 @@ export async function terminate(child) {
 
 export async function launchPackagedApp({ project, userData, codexHome, timeout = 60_000 }) {
   const port = await reservePort();
-  const child = spawn(executable, [`--user-data-dir=${userData}`, "--open-project", project], {
+  const sandboxArguments = packageRoot ? ["--disable-setuid-sandbox"] : [];
+  const child = spawn(executable, [...sandboxArguments, `--user-data-dir=${userData}`, "--open-project", project], {
     detached: true,
     env: { ...process.env, CODEX_HOME: codexHome, CODEX_DESKTOP_DEBUG_PORT: String(port) },
     stdio: ["ignore", "pipe", "pipe"],

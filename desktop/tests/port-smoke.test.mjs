@@ -7,11 +7,16 @@ import test from "node:test";
 import { launchPackagedApp, terminate, waitForLog } from "./helpers/app-driver.mjs";
 
 const startupTimeout = Number(process.env.CODEX_DESKTOP_TEST_TIMEOUT || 60_000);
+const packageRoot = process.env.CODEX_DESKTOP_PACKAGE_ROOT || "/opt/codex-desktop-linux";
 
 test("packaged Linux app starts, mounts its renderer, and opens a Git project", { timeout: startupTimeout + 10_000 }, async t => {
-  const sandbox = await stat("/opt/codex-desktop-linux/chrome-sandbox");
-  assert.equal(sandbox.uid, 0, "Chromium sandbox must be owned by root");
-  assert.equal(sandbox.mode & 0o4777, 0o4755, "Chromium sandbox must be setuid and executable");
+  const sandbox = await stat(path.join(packageRoot, "chrome-sandbox"));
+  if (process.env.CODEX_DESKTOP_PACKAGE_ROOT) {
+    assert.equal(sandbox.mode & 0o755, 0o755, "Unpacked Chromium sandbox must be executable");
+  } else {
+    assert.equal(sandbox.uid, 0, "Installed Chromium sandbox must be owned by root");
+    assert.equal(sandbox.mode & 0o4777, 0o4755, "Installed Chromium sandbox must be setuid and executable");
+  }
 
   const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "chatgpt-linux-test-"));
   const project = path.join(temporaryRoot, "project");

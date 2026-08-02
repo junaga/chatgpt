@@ -1,7 +1,8 @@
 const path = require("node:path");
 
+const packageRoot = process.env.CODEX_DESKTOP_PACKAGE_ROOT || "/opt/codex-desktop-linux";
 const vendorModules = process.env.CODEX_DESKTOP_VENDOR_MODULES ||
-  "/opt/codex-desktop-linux/resources/app/vendor-app/node_modules";
+  path.join(packageRoot, "resources", "app", "vendor-app", "node_modules");
 
 function fail(error) {
   console.error(error?.stack || error);
