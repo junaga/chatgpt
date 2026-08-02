@@ -52,13 +52,18 @@ It is also installed in the desktop application menu as **Codex Desktop**.
 - Installed package: `codex-desktop-linux 26.727.40816-1`
 - Install root: `/opt/codex-desktop-linux`
 - Command: `/usr/bin/codex-desktop`
-- SHA-256: `5a981bc77ff0907b19ee8721969e9eb9ced7e173629605d01763d5bf46df0b66`
 
-Rebuild with:
+Build from the original DMG at the repository root:
 
 ```bash
-sh ~/dev/chatgpt-linux/linux-port/build-deb.sh
+cd ~/dev/chatgpt-linux
+npm ci
+npm run port -- build --dmg /path/to/ChatGPT.dmg
 ```
+
+The generated `.deb.build.json` records the exact output checksum. Package
+bytes are not currently claimed to be reproducible across machines because
+archive timestamps and external tool versions are not normalized.
 
 ## Focused port smoke test
 

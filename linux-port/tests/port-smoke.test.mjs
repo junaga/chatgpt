@@ -28,7 +28,7 @@ test("packaged Linux app starts, mounts its renderer, and opens a Git project", 
 
   t.after(async () => {
     await terminate(child);
-    await rm(temporaryRoot, { recursive: true, force: true });
+    await rm(temporaryRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   });
 
   await waitForLog(logs, /app routes mounted/, deadline);

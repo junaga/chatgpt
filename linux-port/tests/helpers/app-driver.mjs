@@ -33,6 +33,8 @@ export async function terminate(child) {
   if (child.exitCode === null) {
     try { process.kill(-child.pid, "SIGKILL"); } catch {}
   }
+  // The main process can exit before zygote/app-server descendants finish.
+  try { process.kill(-child.pid, "SIGKILL"); } catch {}
 }
 
 export async function launchPackagedApp({ project, userData, codexHome, timeout = 60_000 }) {

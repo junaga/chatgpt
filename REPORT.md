@@ -92,6 +92,14 @@ with Chromium's sandbox enabled, completes authenticated ChatGPT requests, loads
 projects and recent threads, reconciles bundled plugins, and initializes
 browser-use IPC.
 
+The Debian package was also rebuilt end to end from the untouched, checksum-
+verified DMG using the repository's TypeScript pipeline on 2026-08-02. The
+pipeline extracts the ASAR, explicitly validates and repairs the nine safe
+relative symlinks rejected by 7-Zip, rebuilds the declared Linux Electron native
+artifacts from pinned npm packages, assembles the package, and emits a build
+report. That freshly generated package was installed and passed all four
+automatic port-boundary tests.
+
 These results do not demonstrate feature completeness. The automated packaged-
 UI turn test passed on 2026-08-02 but remains an explicit opt-in because it uses
 account quota and creates a remote conversation. Voice, notifications,

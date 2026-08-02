@@ -26,7 +26,7 @@ test("authenticated app completes a file edit through the Linux Codex backend", 
   t.after(async () => {
     await terminate(app.child);
     if (process.env.CODEX_LIVE_KEEP_ARTIFACTS !== "1") {
-      await rm(temporaryRoot, { recursive: true, force: true });
+      await rm(temporaryRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
     } else {
       console.error(`Kept live-test project at ${temporaryRoot}`);
     }

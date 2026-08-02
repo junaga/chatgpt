@@ -16,6 +16,8 @@ substitutions, limitations, packaging instructions, and focused smoke test.
 
 ## Repository contents
 
+- `port/`: typed DMG validation, extraction, native rebuild, and Debian
+  packaging pipeline
 - `linux-port/`: launcher, Debian packaging metadata, and port-boundary test
 - `REPORT.md`: static and dynamic findings, with verified facts separated from
   limitations and untested behavior
@@ -23,7 +25,37 @@ substitutions, limitations, packaging instructions, and focused smoke test.
 The downloaded DMG, extracted proprietary application, generated package,
 runtime state, and `node_modules` are deliberately excluded from Git. A local
 checkout therefore does not contain enough material to build the package until
-the upstream app has been acquired and extracted for legitimate local analysis.
+the upstream app has been acquired for legitimate local analysis.
+
+## Build from the DMG
+
+The supported DMG can be converted end to end without committing or modifying
+the proprietary input:
+
+```bash
+npm ci
+npm run port -- build --dmg ~/Downloads/ChatGPT.dmg
+```
+
+The TypeScript pipeline verifies the complete DMG checksum, installs pinned
+Linux build dependencies, extracts the application and ASAR, validates upstream
+metadata and layout, repairs only version-declared safe symlinks, rebuilds the
+declared Electron native modules, and creates the Debian package under `dist/`.
+It also writes a neighboring `.build.json` report containing input/output hashes
+and build metadata.
+
+Build requirements are Node.js, npm, 7-Zip, `dpkg-deb`, and the normal native
+compiler toolchain required by `node-gyp`. Use `inspect` to validate a DMG
+without extracting or building it:
+
+```bash
+npm run port -- inspect --dmg ~/Downloads/ChatGPT.dmg
+```
+
+Unknown checksums fail closed. Supporting a new upstream build requires a new
+reviewed manifest under `port/manifests/` and any necessary compatibility work.
+Generated work directories, DMGs, extracted files, packages, and build reports
+remain excluded from Git.
 
 ## Upstream version tags
 
