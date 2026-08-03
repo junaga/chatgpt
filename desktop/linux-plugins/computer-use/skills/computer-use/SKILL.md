@@ -1,18 +1,24 @@
 ---
 name: computer-use
-description: Inspect and control the full Linux desktop on an Xorg session by taking screenshots and using the pointer and keyboard.
+description: Inspect and operate accessible Linux apps with the persistent node_repl Computer Use client.
 ---
 
 # Computer Use for Linux
 
-Use the `computer-use` MCP tools for direct desktop interaction. Take a fresh
-`computer_screenshot` before choosing coordinates and again after actions that
-change the screen. Available actions are click, drag, move, press key, scroll,
-and type text.
+Use `node_repl` and follow `.codex-plugin/computer-use-node-repl.md`. Initialize
+the plugin-owned `sky` client once, call `get_app_state` before using an element
+index, and refetch state after actions.
 
-This backend controls the whole Xorg desktop rather than individual apps. It
-does not provide an accessibility tree or app list. Native Wayland sessions are
-not supported yet.
+The client combines AT-SPI app listing, tree state/diffs, and semantic actions
+with screenshots and raw pointer/keyboard fallback. X11 raw control uses the
+bundled upstream Sky Linux client. Wayland uses the Screenshot and persistent
+RemoteDesktop portals and never silently falls back to XWayland. A compositor
+without RemoteDesktop support returns an explicit error; apps with incomplete
+AT-SPI trees may expose fewer semantic elements. Linux screenshots currently
+contain full-desktop content rather than a safely cropped app window.
+`get_app_state` can launch a
+non-running app resolved by desktop ID, display name, or scanned `.desktop`
+path through `gio launch`/`gtk-launch` without a shell.
 
 Ask immediately before an action that sends a message, submits a form, makes a
 purchase, uploads private data, changes an account or system setting, installs

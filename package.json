@@ -20,6 +20,7 @@
   "devDependencies": {
     "@electron/asar": "4.2.1",
     "@types/node": "24.10.0",
+    "electron-builder": "26.15.3",
     "tsx": "4.23.1",
     "typescript": "5.9.3"
   }

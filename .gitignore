@@ -6,5 +6,6 @@
 /desktop/node_modules/
 /desktop/runtime/node_modules/
 /desktop/state/
+/desktop/linux-desktop-bridge/target/
 .DS_Store
 *.log

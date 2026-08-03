@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+
+resources=$(CDPATH= cd -- "$(dirname -- "$0")/../../../../../../.." && pwd)
+CHATGPT_LINUX_EXTENSION_HOST_PATH=$0 \
+  exec "$resources/cua_node/bin/node" "$resources/linux-runtime/chrome-extension-host.mjs" "$@"

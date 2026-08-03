@@ -4,11 +4,19 @@
 !desktop/package.json
 !desktop/package-lock.json
 !desktop/launcher.cjs
+!desktop/linux-desktop-bridge/
+!desktop/linux-desktop-bridge/**
+!desktop/linux-plugins/
+!desktop/linux-plugins/**
+!desktop/linux-runtime/
+!desktop/linux-runtime/**
 !desktop/packaging/
 !desktop/packaging/**
 !desktop/runtime/
 !desktop/runtime/package.json
 !desktop/runtime/package-lock.json
+!packaging/
+!packaging/**
 !desktop/tests/
 !desktop/tests/**
 !src/
@@ -17,3 +25,4 @@
 !test/container/**
 !tsconfig.json
 !upstream.json
+desktop/linux-desktop-bridge/target/

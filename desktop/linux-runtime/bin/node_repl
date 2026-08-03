@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+resources=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+exec "$resources/cua_node/bin/node" "$resources/linux-runtime/node-repl-host.mjs" "$@"

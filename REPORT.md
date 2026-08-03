@@ -1,110 +1,101 @@
-# Port status
+# Port report
 
-Verified on 2026-08-03 against ChatGPT `26.727.40816` (build `6067`), from the
-Apple Silicon DMG whose SHA-256 is recorded in `upstream.json`.
+This checkout ports ChatGPT `26.727.40816` (build `6067`) from the exact DMG
+recorded in `upstream.json`. It is an independent project, not an OpenAI
+release.
 
-## Architecture
+## What is ported
 
-The upstream application is an Electron renderer and main process connected to
-the Codex app server. The Linux package keeps that JavaScript application and
-replaces platform artifacts at its boundaries:
+The upstream renderer, main process, plugins, and Codex app-server protocol are
+kept. The build replaces only their macOS boundaries:
 
-```text
-upstream renderer and main process
-              |
-       Linux Electron 41
-              |
- Linux Codex CLI / app-server
-       |              |
- better-sqlite3     node-pty
-```
+- Electron, `better-sqlite3`, `node-pty`, and filesystem watching are native
+  Linux x86-64 builds.
+- The pinned Codex CLI is included, so a separate CLI installation is not
+  required.
+- Deep links, media, terminals, projects, Git, SSH, skills, MCP, approvals,
+  automations, and account flows use their normal Electron or Codex paths.
+- Notifications use Electron plus freedesktop desktop identity, permission
+  status, and GNOME/KDE/Xfce/Cinnamon settings links.
+- Remote-control enrollment uses P-256 device keys protected by Electron's
+  Linux Secret Service/KWallet storage.
+- Dictation supports X11 input and the Wayland Global Shortcuts and Remote
+  Desktop portals. The system-wide shortcut depends on compositor support.
+- The complete 18-method Picture-in-Picture contract is implemented with an
+  always-on-top Electron surface for Browser Use and Computer Use previews.
 
-Linux automation is supplied as two narrow MCP adapters:
+## Browser Use
 
-```text
-Browser MCP       -> Playwright -> dedicated Chromium profile
-Computer Use MCP  -> OpenAI Sky Linux helper -> Xorg
-```
+Browser Use follows the upstream architecture; it does not use Playwright or
+the `BROWSER` environment variable. The upstream Browser plugin, browser
+client, browser discovery, policies, confirmations, and exact three-tool
+`node_repl` interface are retained.
 
-The build extracts the checksum-verified DMG and ASAR, validates the expected
-layout and extraction warnings, rebuilds native modules for Linux x86-64, adds
-the Linux filesystem watcher, and stages one application tree. nFPM turns that
-tree into Debian, RPM, and Arch packages. A deterministic root tarball feeds
-the NixOS and Gentoo recipes. The pinned Debian 12 builder gives native modules
-a glibc 2.36 baseline.
+Linux supplies the missing coordinator and Chrome/Edge native-messaging host.
+They support the production extension protocol, side-panel app-server runtime,
+authenticated ChatGPT requests, configuration access, Codex sandboxing, file
+assets, and the same browser socket transport. Flatpak installs a private
+host-visible launcher so a normal host Chrome process can enter the Flatpak
+runtime safely.
 
-## Evidence
+Analytics-only extension routes are not proxied. They do not control Browser
+Use or model capability.
 
-The automated suite has verified:
+## Computer Use
 
-- sandboxed Electron startup and production renderer mounting;
-- a Linux Codex app-server handshake and project opening;
-- SQLite persistence across separate Electron processes;
-- PTY output, exit status, and cancellation;
-- filesystem watcher events;
-- an authenticated renderer-to-app-server turn that created the requested file;
-- browser discovery, MCP negotiation, and tool dispatch;
-- Computer Use input validation, MCP negotiation, and the Wayland guard;
-- package assembly of the Linux browser runtime and x86-64 Sky helper.
+Computer Use exposes the same `sky` window API and method names as macOS. The
+packaged plugin retains the upstream workflow and confirmation policy.
 
-The browser and Computer Use checks are deliberately small unit and package
-tests, not desktop integration tests. The existing live conversation test is
-opt-in because it consumes account usage.
+- AT-SPI supplies app discovery, app launch/activation, accessibility trees,
+  stable element indexes, diffs, semantic clicks, values, selections, and
+  secondary actions on X11 and Wayland.
+- X11 screenshots and raw pointer/keyboard input use the upstream bundled
+  Linux Sky client.
+- Wayland screenshots use the XDG Screenshot portal. Pointer, keyboard, drag,
+  scroll, and coordinate actions use one persistent XDG Remote Desktop plus
+  ScreenCast session.
+- XWayland is never used silently for a native Wayland desktop. An explicit
+  opt-in remains available for unusual compositor setups.
 
-## Feature audit
+Linux capture returns the full desktop rather than a cropped app window because
+Sky and the portal do not expose a reliable cross-display crop under mixed
+scaling. The accessibility tree remains scoped to the approved app.
 
-Deep links have a packaged-Linux path in the upstream main process. Desktop
-notifications and media APIs are supplied by Electron/Chromium. Projects,
-threads, Git, terminals, plugins, skills, MCP, automations, SSH connections,
-account flows, approvals, and shortcuts use the renderer or Codex app-server;
-they do not contain a missing macOS binary boundary in this release. Not all of
-these remote/UI workflows have dedicated end-to-end tests, so this is an
-architecture finding rather than a claim that every screen is certified.
+A compositor that does not implement the relevant portal returns an honest
+per-operation error. GNOME, KDE, and other desktops may show their own chooser
+or permission prompt; the app cannot bypass that security boundary.
 
-Sparkle is the macOS download/install updater. The Linux launcher forces its
-shared upstream gate off, including the passive Linux relaunch watcher. Linux
-updates are owned by the package manager and project releases. The setting is
-not patched into the minified renderer: upstream's gray “Managed” row represents
-organization policy, not platform capability.
+## Updates and Apple APIs
 
-Apple Events are not a general MCP feature. In this release they are a private
-macOS transport between ChatGPT and its Computer Use service. The Linux Computer
-Use adapter bypasses that transport. Other Objective-C, Launch Services, and
-macOS permission hooks are platform plumbing; Linux deep links, notifications,
-media permissions, and desktop integration use Electron and freedesktop APIs.
+Sparkle is the macOS download-and-install updater. It is deliberately disabled
+on Linux, no Electron update metadata is published, and Linux packages are
+updated by installing a newer release. The renderer's gray “Managed” update row
+is an organization-policy message, so the port does not misuse it as a platform
+status indicator.
 
-## Remaining work
+Apple Events are not an MCP system. In this app they are a private transport to
+the macOS Computer Use service; Linux bypasses them with the AT-SPI/Sky/portal
+bridge above. Apple Reminders and Messages integrations remain Apple-service
+features rather than portable desktop APIs.
 
-Browser control is available through a Linux-owned Playwright MCP. `BROWSER` is
-the first executable choice, followed by the XDG desktop default and known
-Chromium commands. It always uses a dedicated profile. The exact upstream
-in-app-browser and Chrome-extension backends remain unavailable because the DMG
-contains only macOS builds of the sandboxed `node_repl` coordinator and native
-extension host.
+## Packages
 
-Computer Use is available on Xorg through the OpenAI `sky_linux_x64` helper
-already present in the DMG. The adapter exposes only screenshot, click, drag,
-move, key, scroll, and text actions. Native Wayland remains substantial work:
-the intended design is XDG Remote Desktop and ScreenCast portals, PipeWire for
-frames, and EIS/libei for compositor-mediated input. XWayland cannot provide
-reliable full-desktop access to native Wayland applications, so the adapter
-refuses Wayland by default.
+One staged application tree feeds nFPM for Debian, RPM, and Arch packages,
+electron-builder for AppImage, Snap, and Flatpak, and the generic tarball used
+by the NixOS and Gentoo recipes. The release contains nine short artifact names
+listed in the README.
 
-Smaller gaps found in the deeper audit are system-wide dictation hotkey/paste,
-secure enrollment of this machine as a remote-control client, and opening the
-desktop's notification-settings panel. macOS Reminders and Messages are Apple
-service integrations without direct Linux desktop equivalents. These are
-documented exclusions, not evidence that normal voice chat, notifications, SSH,
-or MCP are broken.
+## Verification and limits
 
-The compatibility runtime is stock Electron `41.10.3`, while the analyzed macOS
-bundle uses customized Electron `42.3.0`. Host-specific behavior still merits
-testing on real GNOME and KDE Wayland/X11 sessions, particularly audio,
-notifications, keyring/portal prompts, suspend/resume, GPU behavior, browser
-pairing, and SSH hosts. Those are release-coverage tasks unless testing exposes
-a transformation or launcher defect.
+The repository has unit and static tests for every Linux boundary, protocol,
+patch assertion, and package recipe. Release builds also verify package
+metadata and checksums. No desktop integration tests were added.
 
-The port is currently x86-64 only and supports one pinned upstream DMG. RPM
-packaging shares the Debian-built glibc payload and therefore targets modern
-glibc distributions; it still requires a clean Fedora-family installation test
-before a public release should call it verified.
+This revision is x86-64 only and tied to one upstream DMG. It uses stock
+Electron `41.10.3` while that macOS release carries customized Electron
+`42.3.0`. Real desktop behavior still varies with keyring state, portal and
+compositor support, GPU/audio drivers, and browser installation.
+
+Linux device keys are OS-encrypted but not hardware-nonextractable. A server
+policy that requires a hardware-backed key is rejected rather than weakened or
+misreported.

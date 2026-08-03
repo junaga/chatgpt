@@ -1,14 +1,4 @@
 #!/bin/sh
 set -eu
 
-if [ -z "${CODEX_CLI_PATH:-}" ]; then
-  CODEX_CLI_PATH="$(command -v codex || true)"
-fi
-
-if [ -z "$CODEX_CLI_PATH" ] || [ ! -x "$CODEX_CLI_PATH" ]; then
-  printf '%s\n' "Codex CLI was not found. Install it or set CODEX_CLI_PATH." >&2
-  exit 127
-fi
-
-export CODEX_CLI_PATH
 exec /opt/chatgpt/codex-desktop "$@"

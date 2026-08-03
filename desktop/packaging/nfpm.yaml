@@ -34,10 +34,13 @@ overrides:
       - libgbm1
       - libgcc-s1
       - libglib2.0-0
+      - libglib2.0-bin
       - libgtk-3-0
+      - libgtk-3-bin
       - libnspr4
       - libnss3
       - libpango-1.0-0
+      - libsecret-1-0
       - libstdc++6
       - libx11-6
       - libxcb1
@@ -49,8 +52,6 @@ overrides:
       - libxrandr2
       - xdg-utils
       - xz-utils
-    recommends:
-      - codex
   rpm:
     depends:
       - alsa-lib
@@ -68,6 +69,7 @@ overrides:
       - libXext
       - libXfixes
       - libxkbcommon
+      - libsecret
       - libXrandr
       - mesa-libgbm
       - nspr
@@ -91,6 +93,7 @@ overrides:
       - libxext
       - libxfixes
       - libxkbcommon
+      - libsecret
       - libxrandr
       - mesa
       - nspr

@@ -1,19 +1,18 @@
 {
   "name": "computer-use",
   "version": "1.0.1000551",
-  "description": "Control an Xorg desktop on Linux through screenshot and input actions.",
+  "description": "Inspect and operate accessible Linux apps through Computer Use.",
   "author": {
     "name": "OpenAI and ChatGPT Linux contributors"
   },
   "homepage": "https://github.com/junaga/chatgpt-linux",
   "license": "Proprietary upstream application; independent Linux adapter",
-  "keywords": ["computer-use", "desktop-control", "linux", "x11"],
-  "mcpServers": "./.mcp.json",
+  "keywords": ["computer-use", "desktop-control", "linux", "accessibility", "at-spi"],
   "skills": "./skills/",
   "interface": {
     "displayName": "Computer Use",
-    "shortDescription": "Control an Xorg desktop on Linux",
-    "longDescription": "Computer Use can see and control the full Linux desktop on an Xorg session. Native Wayland support is not available yet.",
+    "shortDescription": "Operate accessible Linux apps",
+    "longDescription": "Computer Use combines AT-SPI app semantics with full-desktop screenshots and pointer/keyboard control. It uses the bundled Sky client on X11 and desktop portals on supported Wayland compositors.",
     "developerName": "OpenAI and ChatGPT Linux contributors",
     "category": "Productivity",
     "websiteURL": "https://github.com/junaga/chatgpt-linux",

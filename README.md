@@ -1,7 +1,6 @@
 # ChatGPT for Linux
 
-An experimental Linux build of the ChatGPT Codex desktop app. This is an
-independent project, not an official OpenAI release.
+An unofficial x86-64 Linux port of the ChatGPT Codex desktop app.
 
 ## Install
 
@@ -13,36 +12,33 @@ curl -fL "$LINK" > chatgpt.deb
 sudo apt install ./chatgpt.deb
 ```
 
-The Codex CLI must also be installed and signed in. Start the app with
-`chatgpt` or from the desktop menu.
+APT shows the package as:
+
+> Package: chatgpt
+>
+> Version: 26.727.40816-6
+>
+> Architecture: amd64
+>
+> Description: Experimental ChatGPT Codex desktop compatibility port for Linux.
 
 ## Downloads
 
-- Debian and Ubuntu: `chatgpt.deb`
-- Fedora, RHEL, and openSUSE: `chatgpt.rpm`
-- Arch Linux: `chatgpt.pkg.tar.zst`
-- NixOS: `packaging/nix/default.nix`
-- Gentoo: `packaging/gentoo/chatgpt-26.727.40816_p5.ebuild`
-- Generic Linux files: `chatgpt.tar.gz`
+- Debian/Ubuntu — `chatgpt.deb`
+- Fedora/RHEL/openSUSE — `chatgpt.rpm`
+- Arch Linux — `chatgpt.pkg.tar.zst`
+- AppImage — `chatgpt.AppImage`
+- Snap — `chatgpt.snap`
+- Flatpak — `chatgpt.flatpak`
+- Generic Linux — `chatgpt.tar.gz`
+- NixOS recipe — `chatgpt.nix`
+- Gentoo recipe — `chatgpt.ebuild`
 
-AppImage, Snap, and Flatpak downloads are not built yet.
+The app includes its Codex runtime. Browser Use, Computer Use, remote control,
+notifications, and dictation have Linux implementations. Wayland desktop access
+uses your compositor's portals; global shortcuts depend on compositor support.
+The macOS in-app updater is intentionally disabled—install a newer package to
+update.
 
-## Status
-
-The main app works. Browser control uses a dedicated Chromium profile selected
-by `BROWSER`. Computer Use works on Xorg; native Wayland support is not ready.
-In-app updates are disabled—update ChatGPT with your Linux package manager.
-
-See [REPORT.md](REPORT.md) for remaining platform differences.
-
-## Build
-
-This checkout supports the exact ChatGPT DMG recorded in `upstream.json`.
-
-```bash
-npm ci
-npm run port:container
-```
-
-Artifacts are written to `dist/`. Run the small repository checks with
-`npm test`.
+See [the port report](REPORT.md) for details. Build with `npm run port:container`
+and run the small unit/static checks with `npm test`.
