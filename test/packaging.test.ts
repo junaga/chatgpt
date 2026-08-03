@@ -39,3 +39,12 @@ test("release artifacts use the short chatgpt basename", async () => {
   assert.doesNotMatch(cli, /chatgpt-linux\.(?:deb|rpm|pkg\.tar\.zst|tar\.gz)/);
   assert.doesNotMatch(cli, /chatgpt-linux\.build\.json/);
 });
+
+test("the Linux browser plugin is staged with its runtime", async () => {
+  const cli = await readFile(new URL("../src/cli.ts", import.meta.url), "utf8");
+  const manifest = await readFile(new URL("../desktop/linux-plugins/browser/.codex-plugin/plugin.json", import.meta.url), "utf8");
+  const mcp = await readFile(new URL("../desktop/linux-plugins/browser/.mcp.json", import.meta.url), "utf8");
+  assert.match(cli, /installLinuxPlugin\(resources, installRoot, "browser"\)/);
+  assert.equal(JSON.parse(manifest).name, "browser");
+  assert.equal(JSON.parse(mcp).mcpServers.browser.command, "./bin/browser-launcher");
+});

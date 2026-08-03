@@ -188,6 +188,18 @@ async function writeDesktopPackageJson(destination: string, vendorApp: string): 
   await writeFile(destination, `${JSON.stringify(source, null, 2)}\n`);
 }
 
+async function installLinuxPlugin(resources: string, installRoot: string, name: string): Promise<void> {
+  const source = path.join(resources, "plugins", "openai-bundled", "plugins", name);
+  const overlay = path.join(desktop, "linux-plugins", name);
+  const destination = path.join(installRoot, "resources", "plugins", "openai-bundled", "plugins", name);
+  await requireFile(path.join(overlay, ".codex-plugin", "plugin.json"), `Linux ${name} plugin`);
+  await rm(destination, { recursive: true, force: true });
+  await cp(overlay, destination, { recursive: true });
+  const assets = path.join(source, "assets");
+  await cp(assets, path.join(destination, "assets"), { recursive: true });
+  await chmod(path.join(destination, "bin", `${name}-launcher`), 0o755);
+}
+
 async function assemblePackageRoot(app: string, packageRoot: string): Promise<void> {
   const installRoot = path.join(packageRoot, "opt", "chatgpt");
   const resources = path.join(app, "Contents", "Resources");
@@ -204,6 +216,8 @@ async function assemblePackageRoot(app: string, packageRoot: string): Promise<vo
   await cp(vendorApp, path.join(installRoot, "resources", "app", "vendor-app"), { recursive: true });
   await cp(path.join(runtimeModules, "node_modules"), path.join(installRoot, "resources", "app", "vendor-app", "node_modules"), { recursive: true });
   await cp(path.join(resources, "plugins"), path.join(installRoot, "resources", "plugins"), { recursive: true });
+  await cp(path.join(desktop, "linux-runtime"), path.join(installRoot, "resources", "linux-runtime"), { recursive: true });
+  await installLinuxPlugin(resources, installRoot, "browser");
   await cp(path.join(desktop, "launcher.cjs"), path.join(installRoot, "resources", "app", "launcher.cjs"));
   await writeDesktopPackageJson(path.join(installRoot, "resources", "app", "package.json"), vendorApp);
 
