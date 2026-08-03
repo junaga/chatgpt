@@ -1,0 +1,25 @@
+{
+  "name": "computer-use",
+  "version": "1.0.1000551",
+  "description": "Control an Xorg desktop on Linux through screenshot and input actions.",
+  "author": {
+    "name": "OpenAI and ChatGPT Linux contributors"
+  },
+  "homepage": "https://github.com/junaga/chatgpt-linux",
+  "license": "Proprietary upstream application; independent Linux adapter",
+  "keywords": ["computer-use", "desktop-control", "linux", "x11"],
+  "mcpServers": "./.mcp.json",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Computer Use",
+    "shortDescription": "Control an Xorg desktop on Linux",
+    "longDescription": "Computer Use can see and control the full Linux desktop on an Xorg session. Native Wayland support is not available yet.",
+    "developerName": "OpenAI and ChatGPT Linux contributors",
+    "category": "Productivity",
+    "websiteURL": "https://github.com/junaga/chatgpt-linux",
+    "logo": "./assets/app-icon.png",
+    "defaultPrompt": ["Help me use an app on my desktop"],
+    "brandColor": "#0F172A",
+    "screenshots": []
+  }
+}

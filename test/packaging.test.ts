@@ -48,3 +48,13 @@ test("the Linux browser plugin is staged with its runtime", async () => {
   assert.equal(JSON.parse(manifest).name, "browser");
   assert.equal(JSON.parse(mcp).mcpServers.browser.command, "./bin/browser-launcher");
 });
+
+test("the OpenAI Linux Computer Use helper is staged behind the Linux plugin", async () => {
+  const cli = await readFile(new URL("../src/cli.ts", import.meta.url), "utf8");
+  const manifest = await readFile(new URL("../desktop/linux-plugins/computer-use/.codex-plugin/plugin.json", import.meta.url), "utf8");
+  const mcp = await readFile(new URL("../desktop/linux-plugins/computer-use/.mcp.json", import.meta.url), "utf8");
+  assert.match(cli, /installLinuxPlugin\(resources, installRoot, "computer-use"\)/);
+  assert.match(cli, /@oai", "sky", "bin", "linux", "sky_linux_x64/);
+  assert.equal(JSON.parse(manifest).name, "computer-use");
+  assert.equal(JSON.parse(mcp).mcpServers["computer-use"].command, "./bin/computer-use-launcher");
+});

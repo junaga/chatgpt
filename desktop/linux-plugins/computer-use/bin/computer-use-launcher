@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+
+plugin_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+resources=$(CDPATH= cd -- "$plugin_root/../../../.." && pwd)
+export CHATGPT_SKY_LINUX_BIN="$resources/linux-runtime/bin/sky_linux_x64"
+export ELECTRON_RUN_AS_NODE=1
+exec "$resources/../codex-desktop" "$resources/linux-runtime/computer-use-server.mjs"

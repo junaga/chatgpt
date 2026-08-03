@@ -218,6 +218,13 @@ async function assemblePackageRoot(app: string, packageRoot: string): Promise<vo
   await cp(path.join(resources, "plugins"), path.join(installRoot, "resources", "plugins"), { recursive: true });
   await cp(path.join(desktop, "linux-runtime"), path.join(installRoot, "resources", "linux-runtime"), { recursive: true });
   await installLinuxPlugin(resources, installRoot, "browser");
+  await installLinuxPlugin(resources, installRoot, "computer-use");
+  const skySource = path.join(resources, "cua_node", "lib", "node_modules", "@oai", "sky", "bin", "linux", "sky_linux_x64");
+  const skyDestination = path.join(installRoot, "resources", "linux-runtime", "bin", "sky_linux_x64");
+  await requireFile(skySource, "Bundled Linux Computer Use helper");
+  await mkdir(path.dirname(skyDestination), { recursive: true });
+  await cp(skySource, skyDestination);
+  await chmod(skyDestination, 0o755);
   await cp(path.join(desktop, "launcher.cjs"), path.join(installRoot, "resources", "app", "launcher.cjs"));
   await writeDesktopPackageJson(path.join(installRoot, "resources", "app", "package.json"), vendorApp);
 
