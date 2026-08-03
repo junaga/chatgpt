@@ -6,6 +6,9 @@
 !desktop/launcher.cjs
 !desktop/packaging/
 !desktop/packaging/**
+!desktop/runtime/
+!desktop/runtime/package.json
+!desktop/runtime/package-lock.json
 !desktop/tests/
 !desktop/tests/**
 !src/

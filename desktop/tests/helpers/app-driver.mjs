@@ -85,9 +85,17 @@ export async function launchPackagedApp({ project, userData, codexHome, timeout 
 
     let page;
     while (Date.now() < deadline) {
-      page = browser.contexts().flatMap(context => context.pages())
-        .find(candidate => candidate.url().startsWith("app://-") && !candidate.url().includes("initialRoute="));
-      if (page) break;
+      const candidates = browser.contexts().flatMap(context => context.pages())
+        .filter(candidate => candidate.url().startsWith("app://-") && !candidate.url().includes("initialRoute="));
+      const measured = await Promise.all(candidates.map(async candidate => ({
+        area: await candidate.evaluate(() => window.innerWidth * window.innerHeight).catch(() => 0),
+        candidate,
+      })));
+      const largest = measured.sort((left, right) => right.area - left.area)[0];
+      if (largest && largest.area >= 200_000) {
+        page = largest.candidate;
+        break;
+      }
       await new Promise(resolve => setTimeout(resolve, 250));
     }
     assert.ok(page, `No app renderer appeared.\n${logs()}`);

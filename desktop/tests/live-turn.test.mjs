@@ -4,40 +4,11 @@ import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { deleteThreadsForCwd } from "./helpers/app-server.mjs";
 import { createTestWorkspace, launchPackagedApp, terminate, waitForLog } from "./helpers/app-driver.mjs";
 
 const enabled = process.env.CODEX_LIVE_TEST === "1";
 const timeout = Number(process.env.CODEX_LIVE_TEST_TIMEOUT || 300_000);
-
-async function archiveAndDeleteCurrentChat(page, label) {
-  const actions = page.getByRole("button", { name: "Chat actions", exact: true });
-  await actions.click();
-  await page.getByRole("menuitem", { name: "Rename chat", exact: true }).click();
-  const renameDialog = page.getByRole("dialog");
-  const title = renameDialog.getByRole("textbox");
-  await title.fill(label);
-  await renameDialog.getByRole("button", { name: /rename|save/i }).click();
-  await renameDialog.waitFor({ state: "hidden" });
-
-  await actions.click();
-  await page.getByRole("menuitem", { name: "Archive chat", exact: true }).click();
-  const archiveDialog = page.getByRole("dialog");
-  await archiveDialog.getByRole("button", { name: "Archive", exact: true }).click();
-  await archiveDialog.waitFor({ state: "hidden" });
-
-  const settings = page.getByRole("link", { name: "Settings", exact: true }).last();
-  await settings.click();
-  const search = page.getByPlaceholder("Search archived chats");
-  await search.waitFor({ state: "visible" });
-  await search.fill(label);
-
-  const deleteButton = page.getByRole("button", { name: "Delete archived chat", exact: true });
-  await deleteButton.click();
-  const deleteDialog = page.getByRole("dialog");
-  await deleteDialog.getByRole("button", { name: "Delete", exact: true }).click();
-  await deleteDialog.waitFor({ state: "hidden" });
-  await deleteButton.waitFor({ state: "detached" });
-}
 
 test("authenticated app completes a file edit through the Linux Codex backend", {
   skip: enabled ? false : "set CODEX_LIVE_TEST=1; this test consumes account usage and creates then deletes a remote thread",
@@ -45,7 +16,6 @@ test("authenticated app completes a file edit through the Linux Codex backend", 
 }, async t => {
   const workspace = await createTestWorkspace("chatgpt-linux-live-");
   const outputPath = path.join(workspace.project, "port-live-test.txt");
-  const threadLabel = `chatgpt-linux live test ${Date.now()}`;
   const codexHome = process.env.CODEX_LIVE_CODEX_HOME || path.join(os.homedir(), ".codex");
 
   const app = await launchPackagedApp({
@@ -57,17 +27,18 @@ test("authenticated app completes a file edit through the Linux Codex backend", 
   let threadCreated = false;
   t.after(async () => {
     try {
+      await terminate(app.child);
       if (threadCreated && process.env.CODEX_LIVE_KEEP_THREAD !== "1") {
-        await archiveAndDeleteCurrentChat(app.page, threadLabel);
+        const deleted = await deleteThreadsForCwd({ codexHome, cwd: workspace.project });
+        assert.ok(deleted.length > 0, `No live-test thread was found for ${workspace.project}`);
       }
     } catch (error) {
       throw new Error(
         `The live-test thread could not be deleted. Set CODEX_LIVE_KEEP_ARTIFACTS=1 ` +
-        `and rerun to inspect the UI.\n${app.logs().slice(-4_000)}`,
+        `and rerun to inspect the test project.\n${app.logs().slice(-4_000)}`,
         { cause: error },
       );
     } finally {
-      await terminate(app.child);
       if (process.env.CODEX_LIVE_KEEP_ARTIFACTS !== "1") {
         await workspace.remove();
       } else {
@@ -108,7 +79,12 @@ test("authenticated app completes a file edit through the Linux Codex backend", 
     } catch {}
     await new Promise(resolve => setTimeout(resolve, 500));
   }
-  assert.equal(actual?.trim(), expected, `The expected edit did not complete.\n${app.logs().slice(-4_000)}`);
+  const visibleText = await app.page.locator("body").innerText().catch(() => "<renderer unavailable>");
+  assert.equal(
+    actual?.trim(),
+    expected,
+    `The expected edit did not complete.\nVisible UI:\n${visibleText.slice(-4_000)}\nLogs:\n${app.logs().slice(-4_000)}`,
+  );
 
   const status = spawnSync("git", ["status", "--short", "--", "port-live-test.txt"], {
     cwd: workspace.project,

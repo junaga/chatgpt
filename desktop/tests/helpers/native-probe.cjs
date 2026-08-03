@@ -1,4 +1,5 @@
 const path = require("node:path");
+const { writeFile } = require("node:fs/promises");
 
 const packageRoot = process.env.CODEX_DESKTOP_PACKAGE_ROOT || "/opt/codex-desktop-linux";
 const vendorModules = process.env.CODEX_DESKTOP_VENDOR_MODULES ||
@@ -76,6 +77,24 @@ async function ptyKillProbe() {
   });
 }
 
+async function watcherProbe(directory) {
+  const watcher = require(path.join(vendorModules, "@parcel", "watcher"));
+  const { promise, resolve, reject } = Promise.withResolvers();
+  const timeout = setTimeout(() => reject(new Error("Watcher did not report the created file")), 5_000);
+  let subscription;
+  try {
+    subscription = await watcher.subscribe(directory, (error, events) => {
+      if (error) reject(error);
+      else if (events.some(event => event.path.endsWith("port-watcher-output"))) resolve();
+    });
+    await writeFile(path.join(directory, "port-watcher-output"), "watched");
+    await promise;
+  } finally {
+    clearTimeout(timeout);
+    await subscription?.unsubscribe();
+  }
+}
+
 const [probe, ...arguments_] = process.argv.slice(2);
 const task = probe === "sqlite"
   ? sqliteProbe(arguments_[0], arguments_[1])
@@ -83,5 +102,7 @@ const task = probe === "sqlite"
     ? ptyProbe()
     : probe === "pty-kill"
       ? ptyKillProbe()
-    : Promise.reject(new Error(`Unknown native probe: ${probe}`));
+      : probe === "watcher"
+        ? watcherProbe(arguments_[0])
+        : Promise.reject(new Error(`Unknown native probe: ${probe}`));
 task.catch(fail);

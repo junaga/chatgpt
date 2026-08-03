@@ -87,7 +87,7 @@ Verified runtime milestones:
   `linux-x86_64` primary-runtime bundles.
 
 The prototype renders the authenticated production UI under Xvfb and is packaged
-as `codex-desktop-linux_26.727.40816-2_amd64.deb`. The installed package runs
+as `codex-desktop-linux_26.727.40816-3_amd64.deb`. The installed package runs
 with Chromium's sandbox enabled, completes authenticated ChatGPT requests, loads
 projects and recent threads, reconciles bundled plugins, and initializes
 browser-use IPC.
@@ -99,11 +99,22 @@ symlink warnings emitted by 7-Zip, rebuilds the declared Linux Electron
 native artifacts from pinned npm packages, assembles the package, and emits a
 build report. The skipped `cua_node` command links are not reconstructed because
 that macOS runtime is not included in the Debian package. The freshly generated
-package was installed and passed all four automatic port-boundary tests.
+package was installed and passed the automatic port-boundary tests.
+
+An initial native rebuild inherited glibc 2.42 from its build host, so its
+`node-pty` artifact could not load in a clean Debian 12 environment. Port
+revision 3 builds inside a pinned Debian 12 container, declares the native C++
+runtime dependencies, supplies the upstream-declared `@parcel/watcher` Linux
+runtime omitted from the macOS artifact, and passes the renderer, filesystem
+watcher, SQLite, and PTY boundary tests after installation in a separate clean
+Debian 12 container. The package also declares `xz-utils`, which the desktop
+runtime installer needs to unpack its Linux tool bundle. This establishes a
+glibc 2.36 deployment baseline; it does not make package bytes reproducible.
 
 These results do not demonstrate feature completeness. The automated packaged-
-UI turn test passed on 2026-08-02 but remains an explicit opt-in because it uses
-account quota and creates a remote conversation. Voice, notifications,
+UI turn test passed on 2026-08-03 but remains an explicit opt-in because it uses
+account quota. Its disposable conversation is permanently deleted by exact ID
+through the app-server API during teardown, and a cleanup failure fails the test. Voice, notifications,
 shortcuts, deep links, automations, SSH, browser-extension pairing, account
 lifecycle, and update behavior remain untested. The browser Node-REPL backend
 reports a missing runtime component. Computer use, Apple Events, Objective-C

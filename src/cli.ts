@@ -10,6 +10,7 @@ import { loadUpstream, sha256, type UpstreamRelease } from "./upstream.ts";
 const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const upstreamFile = path.join(repository, "upstream.json");
 const desktop = path.join(repository, "desktop");
+const runtimeModules = path.join(desktop, "runtime");
 
 interface Options {
   command: "inspect" | "build";
@@ -198,6 +199,7 @@ async function assembleDeb(app: string, buildRoot: string, output: string, upstr
   await rename(path.join(installRoot, "electron"), path.join(installRoot, "codex-desktop"));
   const vendorApp = path.join(resources, "app.asar.extracted");
   await cp(vendorApp, path.join(installRoot, "resources", "app", "vendor-app"), { recursive: true });
+  await cp(path.join(runtimeModules, "node_modules"), path.join(installRoot, "resources", "app", "vendor-app", "node_modules"), { recursive: true });
   await cp(path.join(resources, "plugins"), path.join(installRoot, "resources", "plugins"), { recursive: true });
   await cp(path.join(desktop, "launcher.cjs"), path.join(installRoot, "resources", "app", "launcher.cjs"));
   await writeDesktopPackageJson(path.join(installRoot, "resources", "app", "package.json"), vendorApp);
@@ -233,6 +235,7 @@ async function main(): Promise<void> {
 
   console.log("Installing pinned Linux build dependencies…");
   await run("npm", ["ci", "--prefix", desktop]);
+  await run("npm", ["ci", "--prefix", runtimeModules]);
   const electron = await desktopElectronVersion();
 
   const workRoot = path.join(options.work, checksum.slice(0, 16));

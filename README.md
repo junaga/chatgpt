@@ -69,6 +69,7 @@ For example:
 ```text
 upstream-26.727.40816-port.1
 upstream-26.727.40816-port.2
+upstream-26.727.40816-port.3
 ```
 
 A port bug fix for an older DMG is made from its tag on a temporary maintenance
@@ -116,7 +117,7 @@ CODEX_DESKTOP_PACKAGE_ROOT=/tmp/chatgpt-linux-package/opt/codex-desktop-linux \
 ```
 
 That suite verifies the sandboxed packaged renderer, SQLite persistence across
-Electron processes, and PTY output, exit status, and cancellation. The
+Electron processes, filesystem watching, and PTY output, exit status, and cancellation. The
 authenticated file-edit test is opt-in because it consumes account usage and
 creates a remote conversation:
 
@@ -137,7 +138,7 @@ npm run test:container
 If `dist/` contains more than one package, select one explicitly:
 
 ```bash
-CODEX_DESKTOP_DEB="$PWD/dist/codex-desktop-linux_26.727.40816-2_amd64.deb" \
+CODEX_DESKTOP_DEB="$PWD/dist/codex-desktop-linux_26.727.40816-3_amd64.deb" \
   npm run test:container
 ```
 
@@ -148,8 +149,8 @@ npm run test:container:live
 ```
 
 Live mode mounts `$HOME/.codex` read-only, copies it into the disposable
-container, submits one real model turn, then archives and permanently deletes
-the test thread through the app. Usage cannot be recovered. Cleanup failure
+container, submits one real model turn, then permanently deletes
+the test thread through Codex's app-server API. Usage cannot be recovered. Cleanup failure
 fails the test instead of being hidden. Set `CODEX_LIVE_KEEP_THREAD=1` to retain
 the thread deliberately, or `CODEX_LIVE_CODEX_HOME` to use another authenticated
 profile. The image pins the Codex CLI version verified by this checkout.

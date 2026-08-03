@@ -9,6 +9,7 @@ COPY package.json package-lock.json tsconfig.json upstream.json ./
 COPY src ./src
 COPY desktop/package.json desktop/package-lock.json desktop/launcher.cjs ./desktop/
 COPY desktop/packaging ./desktop/packaging
+COPY desktop/runtime/package.json desktop/runtime/package-lock.json ./desktop/runtime/
 RUN npm ci
 
 ENTRYPOINT ["npm", "run", "port", "--", "build", "--dmg", "/input/ChatGPT.dmg", "--output", "/output", "--work", "/work"]

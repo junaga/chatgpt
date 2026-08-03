@@ -36,3 +36,9 @@ test("installed node-pty streams output and reports the child exit code", () => 
 test("installed node-pty terminates a running child", () => {
   probe(["pty-kill"]);
 });
+
+test("installed @parcel/watcher reports filesystem changes", async t => {
+  const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "chatgpt-linux-watcher-"));
+  t.after(() => rm(temporaryRoot, { recursive: true, force: true }));
+  probe(["watcher", temporaryRoot]);
+});
