@@ -19,6 +19,13 @@ upstream renderer and main process
  better-sqlite3     node-pty
 ```
 
+Linux automation is supplied as two narrow MCP adapters:
+
+```text
+Browser MCP       -> Playwright -> dedicated Chromium profile
+Computer Use MCP  -> OpenAI Sky Linux helper -> Xorg
+```
+
 The build extracts the checksum-verified DMG and ASAR, validates the expected
 layout and extraction warnings, rebuilds native modules for Linux x86-64, adds
 the Linux filesystem watcher, and stages one application tree. nFPM turns that
@@ -35,11 +42,14 @@ The automated suite has verified:
 - SQLite persistence across separate Electron processes;
 - PTY output, exit status, and cancellation;
 - filesystem watcher events;
-- an authenticated renderer-to-app-server turn that created the requested file.
+- an authenticated renderer-to-app-server turn that created the requested file;
+- browser discovery, MCP negotiation, and tool dispatch;
+- Computer Use input validation, MCP negotiation, and the Wayland guard;
+- package assembly of the Linux browser runtime and x86-64 Sky helper.
 
-The live test is opt-in because it consumes account usage. It deletes the exact
-test conversation through the app-server API, and cleanup failure fails the
-test.
+The browser and Computer Use checks are deliberately small unit and package
+tests, not desktop integration tests. The existing live conversation test is
+opt-in because it consumes account usage.
 
 ## Feature audit
 
@@ -51,20 +61,41 @@ they do not contain a missing macOS binary boundary in this release. Not all of
 these remote/UI workflows have dedicated end-to-end tests, so this is an
 architecture finding rather than a claim that every screen is certified.
 
-Sparkle is macOS-only and is disabled by the upstream platform check. Linux
-updates are owned by APT/DNF and GitHub releases. Apple Events, Objective-C
-bridges, Launch Services helpers, and macOS permission services are not portable
-features; their relevant Linux equivalents are Electron, freedesktop desktop
-entries, Chromium permission handling, and desktop portals.
+Sparkle is the macOS download/install updater. The Linux launcher forces its
+shared upstream gate off, including the passive Linux relaunch watcher. Linux
+updates are owned by the package manager and project releases. The setting is
+not patched into the minified renderer: upstream's gray “Managed” row represents
+organization policy, not platform capability.
+
+Apple Events are not a general MCP feature. In this release they are a private
+macOS transport between ChatGPT and its Computer Use service. The Linux Computer
+Use adapter bypasses that transport. Other Objective-C, Launch Services, and
+macOS permission hooks are platform plumbing; Linux deep links, notifications,
+media permissions, and desktop integration use Electron and freedesktop APIs.
 
 ## Remaining work
 
-Computer use remains the substantial port. Its bundled subsystem depends on
-separate macOS services and helpers. Browser control also requires a
-`node_repl` executable. The DMG's bundled `node` and `node_repl` are arm64
-Mach-O files; substituting ordinary Linux Node is insufficient because
-`node_repl` is a separate sandboxed MCP server. No compatible artifact or
-source is present in this release, so that backend cannot be ported here.
+Browser control is available through a Linux-owned Playwright MCP. `BROWSER` is
+the first executable choice, followed by the XDG desktop default and known
+Chromium commands. It always uses a dedicated profile. The exact upstream
+in-app-browser and Chrome-extension backends remain unavailable because the DMG
+contains only macOS builds of the sandboxed `node_repl` coordinator and native
+extension host.
+
+Computer Use is available on Xorg through the OpenAI `sky_linux_x64` helper
+already present in the DMG. The adapter exposes only screenshot, click, drag,
+move, key, scroll, and text actions. Native Wayland remains substantial work:
+the intended design is XDG Remote Desktop and ScreenCast portals, PipeWire for
+frames, and EIS/libei for compositor-mediated input. XWayland cannot provide
+reliable full-desktop access to native Wayland applications, so the adapter
+refuses Wayland by default.
+
+Smaller gaps found in the deeper audit are system-wide dictation hotkey/paste,
+secure enrollment of this machine as a remote-control client, and opening the
+desktop's notification-settings panel. macOS Reminders and Messages are Apple
+service integrations without direct Linux desktop equivalents. These are
+documented exclusions, not evidence that normal voice chat, notifications, SSH,
+or MCP are broken.
 
 The compatibility runtime is stock Electron `41.10.3`, while the analyzed macOS
 bundle uses customized Electron `42.3.0`. Host-specific behavior still merits

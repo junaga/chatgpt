@@ -2,7 +2,7 @@ EAPI=8
 
 DESCRIPTION="Experimental ChatGPT Codex desktop compatibility port"
 HOMEPAGE="https://github.com/junaga/chatgpt-linux"
-SRC_URI="https://github.com/junaga/chatgpt-linux/releases/download/upstream-26.727.40816-port.4/chatgpt.tar.gz -> ${P}.tar.gz"
+SRC_URI="https://github.com/junaga/chatgpt-linux/releases/download/upstream-26.727.40816-port.5/chatgpt.tar.gz -> ${P}.tar.gz"
 
 LICENSE="all-rights-reserved"
 SLOT="0"

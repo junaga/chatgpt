@@ -1,13 +1,13 @@
 { pkgs ? import <nixpkgs> {} }:
 
 let
-  version = "26.727.40816-4";
+  version = "26.727.40816-5";
   payload = pkgs.stdenvNoCC.mkDerivation {
     pname = "chatgpt-linux-payload";
     inherit version;
     src = pkgs.fetchurl {
-      url = "https://github.com/junaga/chatgpt-linux/releases/download/upstream-26.727.40816-port.4/chatgpt.tar.gz";
-      hash = "sha256-HpNB4GB5iGshpgtsSUW19HLgOCEPUZJkdHBcT0BFGus=";
+      url = "https://github.com/junaga/chatgpt-linux/releases/download/upstream-26.727.40816-port.5/chatgpt.tar.gz";
+      hash = "sha256-cKM7tTbM/hGs4BYDPWY4nJ+289Q+rWREgpqIKwVxpfE=";
     };
     sourceRoot = ".";
     installPhase = ''

@@ -22,13 +22,18 @@ test("the desktop entry declares the chatgpt command and codex links", async () 
   assert.match(launcher, /exec \/opt\/chatgpt\/codex-desktop/);
 });
 
-test("NixOS and Gentoo recipes consume the revision-four root tarball", async () => {
+test("NixOS and Gentoo recipes consume the revision-five root tarball", async () => {
   const nix = await readFile(new URL("nix/default.nix", repositoryPackaging), "utf8");
-  const gentoo = await readFile(new URL("gentoo/chatgpt-26.727.40816_p4.ebuild", repositoryPackaging), "utf8");
+  const gentoo = await readFile(new URL("gentoo/chatgpt-26.727.40816_p5.ebuild", repositoryPackaging), "utf8");
   for (const recipe of [nix, gentoo]) {
-    assert.match(recipe, /upstream-26\.727\.40816-port\.4\/chatgpt\.tar\.gz/);
+    assert.match(recipe, /upstream-26\.727\.40816-port\.5\/chatgpt\.tar\.gz/);
   }
   assert.doesNotMatch(nix, /AAAA/);
+});
+
+test("the Linux launcher disables in-app updates", async () => {
+  const launcher = await readFile(new URL("../desktop/launcher.cjs", import.meta.url), "utf8");
+  assert.match(launcher, /process\.env\.CODEX_SPARKLE_ENABLED = "false"/);
 });
 
 test("release artifacts use the short chatgpt basename", async () => {

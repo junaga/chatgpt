@@ -28,6 +28,8 @@ process.env.CODEX_HOME ||=
 process.env.CODEX_INSTALL_DIR ||= path.dirname(linuxCodex);
 process.env.CODEX_CLI_PATH = linuxCodex;
 process.env.CODEX_DESKTOP_CODEX_PATH = linuxCodex;
+// Linux packages are updated by their package manager, never by the macOS updater.
+process.env.CODEX_SPARKLE_ENABLED = "false";
 process.env.ELECTRON_IS_DEV = "0";
 process.env.BUILD_FLAVOR = "prod";
 process.env.CODEX_BUILD_NUMBER = portPackage.codexBuildNumber;
