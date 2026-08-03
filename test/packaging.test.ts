@@ -35,5 +35,7 @@ test("release artifacts use the short chatgpt basename", async () => {
   const cli = await readFile(new URL("../src/cli.ts", import.meta.url), "utf8");
   assert.match(cli, /"chatgpt\.pkg\.tar\.zst"/);
   assert.match(cli, /`chatgpt\.\$\{format\}`/);
+  assert.match(cli, /"chatgpt\.build\.json"/);
   assert.doesNotMatch(cli, /chatgpt-linux\.(?:deb|rpm|pkg\.tar\.zst|tar\.gz)/);
+  assert.doesNotMatch(cli, /chatgpt-linux\.build\.json/);
 });

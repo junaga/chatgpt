@@ -289,7 +289,7 @@ async function main(): Promise<void> {
       electron,
       nativeModules: Object.keys(upstream.nativeArtifacts),
     };
-    const reportFile = path.join(options.output, "chatgpt-linux.build.json");
+    const reportFile = path.join(options.output, "chatgpt.build.json");
     await writeFile(reportFile, `${JSON.stringify(report, null, 2)}\n`);
     for (const artifact of report.artifacts) console.log(`Built ${artifact.file} (${artifact.sha256})`);
   } finally {
