@@ -2,7 +2,7 @@ FROM node:22-bookworm-slim
 
 ARG NFPM_VERSION=v2.47.0
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential ca-certificates curl p7zip-full python3 \
+    build-essential ca-certificates curl p7zip-full python3 tar zstd \
   && curl -fsSL "https://github.com/goreleaser/nfpm/releases/download/${NFPM_VERSION}/nfpm_${NFPM_VERSION#v}_amd64.deb" -o /tmp/nfpm.deb \
   && dpkg -i /tmp/nfpm.deb \
   && rm /tmp/nfpm.deb \

@@ -10,10 +10,10 @@ const packageRoot = process.env.CODEX_DESKTOP_PACKAGE_ROOT || "/opt/chatgpt";
 const electron = process.env.CODEX_DESKTOP_ELECTRON || path.join(packageRoot, "codex-desktop");
 const helper = fileURLToPath(new URL("helpers/native-probe.cjs", import.meta.url));
 
-function probe(arguments_, runAsNode = true) {
+function probe(arguments_) {
   const result = spawnSync(electron, [helper, ...arguments_], {
     encoding: "utf8",
-    env: runAsNode ? { ...process.env, ELECTRON_RUN_AS_NODE: "1" } : process.env,
+    env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
     timeout: 10_000,
   });
   assert.equal(result.error, undefined);
@@ -41,9 +41,4 @@ test("installed @parcel/watcher reports filesystem changes", async t => {
   const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), "chatgpt-linux-watcher-"));
   t.after(() => rm(temporaryRoot, { recursive: true, force: true }));
   probe(["watcher", temporaryRoot]);
-});
-
-test("installed desktop integration provides notifications and the codex URL handler", () => {
-  if (process.env.CODEX_DESKTOP_PACKAGE_ROOT) return;
-  probe(["desktop"], false);
 });

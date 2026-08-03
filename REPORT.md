@@ -22,8 +22,9 @@ upstream renderer and main process
 The build extracts the checksum-verified DMG and ASAR, validates the expected
 layout and extraction warnings, rebuilds native modules for Linux x86-64, adds
 the Linux filesystem watcher, and stages one application tree. nFPM turns that
-tree into Debian and RPM packages. The pinned Debian 12 builder gives native
-modules a glibc 2.36 baseline.
+tree into Debian, RPM, and Arch packages. A deterministic root tarball feeds
+the NixOS and Gentoo recipes. The pinned Debian 12 builder gives native modules
+a glibc 2.36 baseline.
 
 ## Evidence
 
@@ -34,7 +35,6 @@ The automated suite has verified:
 - SQLite persistence across separate Electron processes;
 - PTY output, exit status, and cancellation;
 - filesystem watcher events;
-- Electron notification availability and `codex://` protocol registration;
 - an authenticated renderer-to-app-server turn that created the requested file.
 
 The live test is opt-in because it consumes account usage. It deletes the exact
@@ -60,8 +60,11 @@ entries, Chromium permission handling, and desktop portals.
 ## Remaining work
 
 Computer use remains the substantial port. Its bundled subsystem depends on
-separate macOS services and helpers. The browser Node-REPL backend also reports
-a missing runtime component and remains unavailable.
+separate macOS services and helpers. Browser control also requires a
+`node_repl` executable. The DMG's bundled `node` and `node_repl` are arm64
+Mach-O files; substituting ordinary Linux Node is insufficient because
+`node_repl` is a separate sandboxed MCP server. No compatible artifact or
+source is present in this release, so that backend cannot be ported here.
 
 The compatibility runtime is stock Electron `41.10.3`, while the analyzed macOS
 bundle uses customized Electron `42.3.0`. Host-specific behavior still merits

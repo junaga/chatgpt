@@ -1,5 +1,5 @@
 {
-  "portRevision": 3,
+  "portRevision": 4,
   "dmgSha256": "fb93a239c811c7639cf45a90ff36c262fa0290640140cd12da3fdc60b62255ae",
   "appPath": "ChatGPT Installer/ChatGPT.app",
   "nativeArtifacts": {

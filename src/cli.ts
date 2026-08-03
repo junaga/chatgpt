@@ -18,7 +18,7 @@ interface Options {
   output: string;
   work: string;
   keepWork: boolean;
-  formats: Array<"deb" | "rpm">;
+  formats: Array<"deb" | "rpm" | "archlinux" | "tar.gz">;
 }
 
 interface VendorRelease {
@@ -27,7 +27,7 @@ interface VendorRelease {
 }
 
 function usage(): never {
-  console.error("Usage: npm run port -- <inspect|build> --dmg <ChatGPT.dmg> [--formats deb,rpm] [--output <dir>] [--work <dir>] [--keep-work]");
+  console.error("Usage: npm run port -- <inspect|build> --dmg <ChatGPT.dmg> [--formats deb,rpm,archlinux,tar.gz] [--output <dir>] [--work <dir>] [--keep-work]");
   process.exit(2);
 }
 
@@ -38,7 +38,7 @@ function parseArguments(arguments_: string[]): Options {
   let output = path.join(repository, "dist");
   let work = path.join(repository, ".work");
   let keepWork = false;
-  let formats: Array<"deb" | "rpm"> = ["deb", "rpm"];
+  let formats: Options["formats"] = ["deb", "rpm", "archlinux", "tar.gz"];
   while (arguments_.length) {
     const argument = arguments_.shift();
     if (argument === "--dmg") dmg = arguments_.shift() || "";
@@ -47,8 +47,9 @@ function parseArguments(arguments_: string[]): Options {
     else if (argument === "--keep-work") keepWork = true;
     else if (argument === "--formats") {
       const requested = (arguments_.shift() || "").split(",");
-      if (requested.length === 0 || requested.some(format => format !== "deb" && format !== "rpm")) usage();
-      formats = [...new Set(requested)] as Array<"deb" | "rpm">;
+      const supported = new Set(["deb", "rpm", "archlinux", "tar.gz"]);
+      if (requested.length === 0 || requested.some(format => !supported.has(format))) usage();
+      formats = [...new Set(requested)] as Options["formats"];
     }
     else usage();
   }
@@ -219,8 +220,17 @@ async function packageFormats(packageRoot: string, output: string, formats: Opti
   await mkdir(output, { recursive: true });
   const artifacts: string[] = [];
   for (const format of formats) {
-    const artifact = path.join(output, `chatgpt-linux.${format}`);
+    const filename = format === "archlinux" ? "chatgpt-linux.pkg.tar.zst" : `chatgpt-linux.${format}`;
+    const artifact = path.join(output, filename);
     await rm(artifact, { force: true });
+    if (format === "tar.gz") {
+      await run("tar", [
+        "--sort=name", "--mtime=@0", "--owner=0", "--group=0", "--numeric-owner",
+        "-czf", artifact, "-C", packageRoot, ".",
+      ]);
+      artifacts.push(artifact);
+      continue;
+    }
     await run("nfpm", ["package", "--config", path.join(desktop, "packaging", "nfpm.yaml"), "--packager", format, "--target", artifact], {
       cwd: repository,
       env: {
