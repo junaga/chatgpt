@@ -11,4 +11,4 @@ if [ -z "$CODEX_CLI_PATH" ] || [ ! -x "$CODEX_CLI_PATH" ]; then
 fi
 
 export CODEX_CLI_PATH
-exec /opt/codex-desktop-linux/codex-desktop "$@"
+exec /opt/chatgpt/codex-desktop "$@"

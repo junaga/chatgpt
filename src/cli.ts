@@ -18,6 +18,7 @@ interface Options {
   output: string;
   work: string;
   keepWork: boolean;
+  formats: Array<"deb" | "rpm">;
 }
 
 interface VendorRelease {
@@ -26,7 +27,7 @@ interface VendorRelease {
 }
 
 function usage(): never {
-  console.error("Usage: npm run port -- <inspect|build> --dmg <ChatGPT.dmg> [--output <dir>] [--work <dir>] [--keep-work]");
+  console.error("Usage: npm run port -- <inspect|build> --dmg <ChatGPT.dmg> [--formats deb,rpm] [--output <dir>] [--work <dir>] [--keep-work]");
   process.exit(2);
 }
 
@@ -37,20 +38,27 @@ function parseArguments(arguments_: string[]): Options {
   let output = path.join(repository, "dist");
   let work = path.join(repository, ".work");
   let keepWork = false;
+  let formats: Array<"deb" | "rpm"> = ["deb", "rpm"];
   while (arguments_.length) {
     const argument = arguments_.shift();
     if (argument === "--dmg") dmg = arguments_.shift() || "";
     else if (argument === "--output") output = path.resolve(arguments_.shift() || usage());
     else if (argument === "--work") work = path.resolve(arguments_.shift() || usage());
     else if (argument === "--keep-work") keepWork = true;
+    else if (argument === "--formats") {
+      const requested = (arguments_.shift() || "").split(",");
+      if (requested.length === 0 || requested.some(format => format !== "deb" && format !== "rpm")) usage();
+      formats = [...new Set(requested)] as Array<"deb" | "rpm">;
+    }
     else usage();
   }
   if (!dmg) usage();
-  return { command, dmg: path.resolve(dmg), output, work, keepWork };
+  return { command, dmg: path.resolve(dmg), output, work, keepWork, formats };
 }
 
 interface RunOptions {
   cwd?: string;
+  env?: NodeJS.ProcessEnv;
   quiet?: boolean;
   capture?: boolean;
   allowedExitCodes?: number[];
@@ -65,7 +73,7 @@ async function run(command: string, arguments_: string[], options: RunOptions = 
   if (!options.quiet) console.log(`→ ${command} ${arguments_.join(" ")}`);
   return await new Promise<RunResult>((resolve, reject) => {
     const stdio: StdioOptions = options.capture ? ["ignore", "pipe", "pipe"] : options.quiet ? "ignore" : "inherit";
-    const child = spawn(command, arguments_, { cwd: options.cwd, stdio });
+    const child = spawn(command, arguments_, { cwd: options.cwd, env: options.env, stdio });
     let output = "";
     if (options.capture && child.stdout && child.stderr) {
       for (const stream of [child.stdout, child.stderr]) {
@@ -179,20 +187,14 @@ async function writeDesktopPackageJson(destination: string, vendorApp: string): 
   await writeFile(destination, `${JSON.stringify(source, null, 2)}\n`);
 }
 
-async function assembleDeb(app: string, buildRoot: string, output: string, upstream: UpstreamRelease, release: VendorRelease): Promise<string> {
-  const architecture = "amd64";
-  const packageVersion = `${release.version}-${upstream.portRevision}`;
-  const packageBase = `codex-desktop-linux_${packageVersion}_${architecture}`;
-  const packageRoot = path.join(buildRoot, packageBase);
-  const installRoot = path.join(packageRoot, "opt", "codex-desktop-linux");
+async function assemblePackageRoot(app: string, packageRoot: string): Promise<void> {
+  const installRoot = path.join(packageRoot, "opt", "chatgpt");
   const resources = path.join(app, "Contents", "Resources");
   await Promise.all([
-    mkdir(path.join(packageRoot, "DEBIAN"), { recursive: true }),
     mkdir(path.join(installRoot, "resources", "app"), { recursive: true }),
     mkdir(path.join(packageRoot, "usr", "bin"), { recursive: true }),
     mkdir(path.join(packageRoot, "usr", "share", "applications"), { recursive: true }),
     mkdir(path.join(packageRoot, "usr", "share", "icons", "hicolor", "512x512", "apps"), { recursive: true }),
-    mkdir(output, { recursive: true }),
   ]);
 
   await cp(path.join(desktop, "node_modules", "electron", "dist"), installRoot, { recursive: true });
@@ -204,20 +206,33 @@ async function assembleDeb(app: string, buildRoot: string, output: string, upstr
   await cp(path.join(desktop, "launcher.cjs"), path.join(installRoot, "resources", "app", "launcher.cjs"));
   await writeDesktopPackageJson(path.join(installRoot, "resources", "app", "package.json"), vendorApp);
 
-  const control = (await readFile(path.join(desktop, "packaging", "control.template"), "utf8"))
-    .replace("@PACKAGE_VERSION@", packageVersion)
-    .replace("@ARCHITECTURE@", architecture);
-  await writeFile(path.join(packageRoot, "DEBIAN", "control"), control);
-  await cp(path.join(desktop, "packaging", "codex-desktop"), path.join(packageRoot, "usr", "bin", "codex-desktop"));
-  await cp(path.join(desktop, "packaging", "codex-desktop.desktop"), path.join(packageRoot, "usr", "share", "applications", "codex-desktop.desktop"));
-  await cp(path.join(resources, "icon-chatgpt.png"), path.join(packageRoot, "usr", "share", "icons", "hicolor", "512x512", "apps", "codex-desktop.png"));
+  await cp(path.join(desktop, "packaging", "chatgpt"), path.join(packageRoot, "usr", "bin", "chatgpt"));
+  await cp(path.join(desktop, "packaging", "chatgpt.desktop"), path.join(packageRoot, "usr", "share", "applications", "chatgpt.desktop"));
+  await cp(path.join(resources, "icon-chatgpt.png"), path.join(packageRoot, "usr", "share", "icons", "hicolor", "512x512", "apps", "chatgpt.png"));
 
-  await chmod(path.join(packageRoot, "usr", "bin", "codex-desktop"), 0o755);
+  await chmod(path.join(packageRoot, "usr", "bin", "chatgpt"), 0o755);
   await chmod(path.join(installRoot, "codex-desktop"), 0o755);
   await chmod(path.join(installRoot, "chrome-sandbox"), 0o4755);
-  const deb = path.join(output, `${packageBase}.deb`);
-  await run("dpkg-deb", ["--root-owner-group", "-Zgzip", "-z1", "--build", packageRoot, deb]);
-  return deb;
+}
+
+async function packageFormats(packageRoot: string, output: string, formats: Options["formats"], release: VendorRelease, upstream: UpstreamRelease): Promise<string[]> {
+  await mkdir(output, { recursive: true });
+  const artifacts: string[] = [];
+  for (const format of formats) {
+    const artifact = path.join(output, `chatgpt-linux.${format}`);
+    await rm(artifact, { force: true });
+    await run("nfpm", ["package", "--config", path.join(desktop, "packaging", "nfpm.yaml"), "--packager", format, "--target", artifact], {
+      cwd: repository,
+      env: {
+        ...process.env,
+        PACKAGE_ROOT: packageRoot,
+        PACKAGE_VERSION: release.version,
+        PACKAGE_RELEASE: String(upstream.portRevision),
+      },
+    });
+    artifacts.push(artifact);
+  }
+  return artifacts;
 }
 
 async function main(): Promise<void> {
@@ -248,21 +263,25 @@ async function main(): Promise<void> {
     const { app, release } = await extract(options.dmg, workRoot, upstream);
     console.log(`Upstream release: ${release.version} (build ${release.build}, port revision ${upstream.portRevision})`);
     await rebuildNativeModules(app, upstream, electron);
-    const deb = await assembleDeb(app, path.join(workRoot, "package"), options.output, upstream, release);
+    const packageRoot = path.join(workRoot, "package-root");
+    await assemblePackageRoot(app, packageRoot);
+    const artifacts = await packageFormats(packageRoot, options.output, options.formats, release, upstream);
     const report = {
       createdAt: new Date().toISOString(),
       upstreamVersion: release.version,
       buildNumber: release.build,
       portRevision: upstream.portRevision,
       dmgSha256: checksum,
-      deb: path.basename(deb),
-      debSha256: await sha256(deb),
+      artifacts: await Promise.all(artifacts.map(async artifact => ({
+        file: path.basename(artifact),
+        sha256: await sha256(artifact),
+      }))),
       electron,
       nativeModules: Object.keys(upstream.nativeArtifacts),
     };
-    await writeFile(`${deb}.build.json`, `${JSON.stringify(report, null, 2)}\n`);
-    console.log(`Built ${deb}`);
-    console.log(`SHA-256: ${report.debSha256}`);
+    const reportFile = path.join(options.output, "chatgpt-linux.build.json");
+    await writeFile(reportFile, `${JSON.stringify(report, null, 2)}\n`);
+    for (const artifact of report.artifacts) console.log(`Built ${artifact.file} (${artifact.sha256})`);
   } finally {
     process.off("SIGINT", interrupt); process.off("SIGTERM", terminate);
     if (!options.keepWork) await rm(workRoot, { recursive: true, force: true });

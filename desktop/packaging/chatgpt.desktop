@@ -1,8 +1,8 @@
 [Desktop Entry]
-Name=Codex Desktop
-Comment=Codex desktop compatibility port for Linux
-Exec=/usr/bin/codex-desktop %U
-Icon=codex-desktop
+Name=ChatGPT
+Comment=ChatGPT Codex desktop compatibility port for Linux
+Exec=/usr/bin/chatgpt %U
+Icon=chatgpt
 Terminal=false
 Type=Application
 Categories=Development;Utility;

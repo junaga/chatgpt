@@ -1,169 +1,93 @@
-# chatgpt-linux
+# ChatGPT for Linux
 
-An experimental Debian compatibility port of the ChatGPT Codex macOS desktop
-app. This is an independent research project, not an OpenAI product or supported
-Linux release.
+An experimental Linux compatibility build of the ChatGPT Codex desktop app.
+It runs the checksum-verified upstream renderer with Linux Electron, native
+modules, and the Codex CLI. This is an independent project, not an OpenAI
+product or supported Linux release.
 
-The current checkout supports exactly one upstream DMG. [`upstream.json`](upstream.json)
-contains only values the build cannot derive: its checksum, port revision,
-extraction path, native artifact destinations, and accepted extraction warnings.
-The upstream version and build come from the checksum-verified app; the Linux
-Electron version comes from the pinned desktop workspace. Git history—not a
-runtime strategy registry—preserves support for older releases.
+## Install
 
-The current port launches the upstream production renderer with stock Linux
-Electron, rebuilt Linux native modules, and the installed Linux Codex CLI. The
-authenticated renderer-to-app-server file-edit workflow has passed end to end.
-This is still not a complete Linux port; see [REPORT.md](REPORT.md) for verified
-findings and remaining gaps.
+Debian, Ubuntu, and derivatives:
 
-## Build the supported release
+```bash
+curl -fL https://github.com/junaga/chatgpt-linux/releases/latest/download/chatgpt-linux.deb -o /tmp/chatgpt.deb && sudo apt install /tmp/chatgpt.deb
+```
 
-Requirements:
+Fedora, RHEL, openSUSE, and derivatives:
 
-- Linux x86-64
-- Node.js and npm
-- 7-Zip and `dpkg-deb`
-- the native compiler toolchain required by `node-gyp`
-- a locally obtained copy of the exact supported ChatGPT DMG
+```bash
+sudo dnf install https://github.com/junaga/chatgpt-linux/releases/latest/download/chatgpt-linux.rpm
+```
+
+The Codex CLI must also be installed and authenticated. Start the app with
+`chatgpt` or from the desktop menu.
+
+```text
+$ apt show chatgpt
+Package: chatgpt
+Version: 26.727.40816-3
+Priority: optional
+Section: devel
+Maintainer: ChatGPT Linux contributors <noreply@github.com>
+Architecture: amd64
+Recommends: codex
+Description: Experimental ChatGPT Codex desktop compatibility port for Linux.
+ Runs the upstream desktop renderer with Linux Electron, native modules,
+ and the Codex CLI. This is an independent project, not an OpenAI product.
+Homepage: https://github.com/junaga/chatgpt-linux
+```
+
+## What works
+
+The production UI, authenticated model turns, projects, threads, file edits,
+Git, terminals, plugins, skills, MCP, automations, SSH connections, desktop
+notifications, and `codex://` links use Linux-compatible Electron or Codex
+interfaces. The clean-container suite verifies app startup, the renderer,
+protocol registration, notification availability, SQLite, filesystem watching,
+and PTYs. The account-backed file-edit test is opt-in.
+
+Computer use is not ported. The browser Node-REPL backend is also unavailable
+because its separate runtime is missing. Apple Events, Objective-C helpers,
+macOS permission services, and Sparkle have no role on Linux; desktop portals,
+Chromium permissions, and the system package manager provide the corresponding
+Linux boundaries. See [REPORT.md](REPORT.md) for the evidence and limitations.
+
+## Build
+
+The checkout supports the exact DMG identified by `upstream.json`. On Linux
+x86-64 with Node.js, npm, 7-Zip, a C++ toolchain, and nFPM:
 
 ```bash
 npm ci
-npm run port -- inspect --dmg ~/Downloads/ChatGPT.dmg
 npm run port -- build --dmg ~/Downloads/ChatGPT.dmg
 ```
 
-`inspect` hashes the DMG and fails unless it matches `upstream.json`. `build`
-installs pinned desktop dependencies, extracts the DMG and ASAR, validates the
-upstream layout, accepts only the declared extraction warnings, rebuilds the
-declared Electron native modules, and writes the Debian package under `dist/`.
-
-A neighboring `.deb.build.json` records the input and output hashes. Package
-bytes are not claimed to be reproducible across machines because archive
-timestamps and external tool versions are not normalized.
-
-Native modules inherit the C library baseline of the build host. For a package
-that runs on Debian 12 or newer, build in the pinned Bookworm container:
+This creates `dist/chatgpt-linux.deb`, `dist/chatgpt-linux.rpm`, and a build
+report. For a Debian 12 native-library baseline, use the pinned container:
 
 ```bash
 npm run port:container
 ```
 
-This reads `original/ChatGPT.dmg` and writes to `dist/` by default. Override
-those paths with `CODEX_DESKTOP_DMG` and `CODEX_DESKTOP_OUTPUT`.
+Select formats with `--formats deb`, `--formats rpm`, or `--formats deb,rpm`.
+Both native packages come from the same staged application tree and nFPM
+manifest. Alpine is intentionally excluded because this build contains glibc
+native modules; sandboxed AppImage, Flatpak, and Snap builds need separate
+runtime and permission testing rather than filename conversion.
 
-The DMG, extracted application, generated package, build workspace, runtime
-state, and `node_modules` are deliberately excluded from Git.
-
-## Versioning model
-
-`main` targets the newest upstream release we are actively porting. Each
-verified snapshot receives an immutable tag:
-
-```text
-upstream-<dmg-version>-port.<revision>
-```
-
-For example:
-
-```text
-upstream-26.727.40816-port.1
-upstream-26.727.40816-port.2
-upstream-26.727.40816-port.3
-```
-
-A port bug fix for an older DMG is made from its tag on a temporary maintenance
-branch and receives a new port-revision tag. Published tags are never moved.
-Checking out a tag restores the complete matching builder, launcher,
-dependencies, tests, documentation, and `upstream.json`.
-
-Supporting a new DMG means changing the current code and metadata together. A
-similar release may need only metadata and dependency updates; an architectural
-change can legitimately require rewriting the extractor or launcher. We do not
-claim that arbitrary future DMGs can be ported by configuration alone.
-
-## Repository layout
-
-```text
-desktop/       packaged launcher, Debian metadata, dependencies, and app tests
-src/           TypeScript DMG-to-DEB builder
-test/          builder metadata tests
-upstream.json  the one upstream release supported by this checkout
-REPORT.md      static analysis, runtime evidence, and known limitations
-```
-
-## Tests
-
-Builder metadata and type checking:
+## Test
 
 ```bash
 npm test
-```
-
-After installing the generated Debian package, test the compatibility seams:
-
-```bash
-npm run test:installed
-```
-
-The same tests can target an unpacked package tree without installation. The
-unpacked run uses Chromium's user-namespace sandbox because its sandbox helper
-cannot be root-owned before installation:
-
-```bash
-dpkg-deb -x dist/codex-desktop-linux_*.deb /tmp/chatgpt-linux-package
-CODEX_DESKTOP_PACKAGE_ROOT=/tmp/chatgpt-linux-package/opt/codex-desktop-linux \
-  npm run test:installed
-```
-
-That suite verifies the sandboxed packaged renderer, SQLite persistence across
-Electron processes, filesystem watching, and PTY output, exit status, and cancellation. The
-authenticated file-edit test is opt-in because it consumes account usage and
-creates a remote conversation:
-
-```bash
-npm run test:live
-```
-
-### Containerized runtime test
-
-The generated package can be tested in a clean Debian userspace with Xvfb. This
-is a reproducible check of package dependencies, Electron startup, the renderer,
-SQLite, PTY handling, and the Linux Codex app-server boundary:
-
-```bash
 npm run test:container
 ```
 
-If `dist/` contains more than one package, select one explicitly:
-
-```bash
-CODEX_DESKTOP_DEB="$PWD/dist/codex-desktop-linux_26.727.40816-3_amd64.deb" \
-  npm run test:container
-```
-
-The account-backed test is also available in the container:
+The authenticated test consumes account usage and deletes its disposable
+thread during teardown:
 
 ```bash
 npm run test:container:live
 ```
 
-Live mode mounts `$HOME/.codex` read-only, copies it into the disposable
-container, submits one real model turn, then permanently deletes
-the test thread through Codex's app-server API. Usage cannot be recovered. Cleanup failure
-fails the test instead of being hidden. Set `CODEX_LIVE_KEEP_THREAD=1` to retain
-the thread deliberately, or `CODEX_LIVE_CODEX_HOME` to use another authenticated
-profile. The image pins the Codex CLI version verified by this checkout.
-
-A container does **not** validate integration with the host desktop. Deep-link
-registration, D-Bus notifications, PipeWire audio, browser pairing, keyring
-behavior, Wayland/X11 differences, GPU behavior, and suspend/resume still need
-host-level tests. Playwright remains the UI driver; filesystem, process, SQLite,
-and PTY assertions provide external evidence for the boundaries tested here.
-
-## Known gaps
-
-macOS-native computer-use services, Apple Events, Objective-C bridges,
-permission helpers, and Sparkle updates are not ported. Approval UI, voice and
-audio, notifications, deep links, automations, SSH projects, browser pairing,
-account lifecycle, and update behavior still need explicit end-to-end coverage.
+`main` tracks the current upstream DMG. Verified snapshots use immutable tags
+named `upstream-<version>-port.<revision>`.

@@ -1,129 +1,76 @@
-# ChatGPT/Codex macOS static analysis
+# Port status
 
-Analysis date: 2026-07-31
+Verified on 2026-08-03 against ChatGPT `26.727.40816` (build `6067`), from the
+Apple Silicon DMG whose SHA-256 is recorded in `upstream.json`.
 
-## Acquisition
+## Architecture
 
-- Official download page: `https://chatgpt.com/download/`
-- Direct artifact: `https://persistent.oaistatic.com/codex-app-prod/ChatGPT.dmg`
-- Local original: `original/ChatGPT.dmg`
-- SHA-256: `fb93a239c811c7639cf45a90ff36c262fa0290640140cd12da3fdc60b62255ae`
-- DMG volume name: `ChatGPT-26.727.40816-arm64`
-- DMG filesystem creation time: `2026-07-30 16:54:18`
-
-The original DMG has not been executed or modified. It was extracted with 7-Zip on Linux. Nine relative symlinks under bundled Node `node_modules/.bin` directories were skipped by 7-Zip's path-safety check.
-
-## Verified application metadata
-
-- Bundle identifier: `com.openai.codex`
-- Display name: `ChatGPT`
-- Alternate/signing base name: `Codex`
-- Version: `26.727.40816` (build `6067`)
-- Architecture: Apple Silicon (`arm64`)
-- Application category: developer tools
-- URL scheme: `codex://`
-- ASAR SHA-256 declared by the bundle: `138f1b8b8ef83cafafd90b47998a5452f9a809d42a475b01ad476898a6586481`
-- Update feed: `https://persistent.oaistatic.com/codex-app-prod/appcast.xml`
-
-## Architecture: verified observations
-
-1. **Desktop shell:** Electron `42.3.0`, Chromium `150.0.7871.182`, with a Vite-built main process and web renderer in `Resources/app.asar`.
-2. **Renderer:** bundled JavaScript UI plus substantial WASM and document/spreadsheet/media assets. React `19.2.7` is present in the emitted bundle.
-3. **Agent engine:** a bundled 270.6 MB native arm64 executable at `Contents/Resources/codex`. Its embedded Rust source-path strings identify crates including `app-server`, `app-server-client`, `codex-api`, transport, sandbox, MCP, skills, plugins, Git/filesystem, and execution components.
-4. **Desktop-to-engine boundary:** the Electron main process starts Codex with `features.code_mode_host=true app-server --analytics-default-enabled`. Remote variants can use Unix sockets, WebSockets, SSH proxying, or remote-control transport. The bundle contains app-server request names such as `thread/start`, `turn/start`, and `config/batchWrite`.
-5. **Persistence:** `better-sqlite3` is bundled for desktop state. The app-server state filename visible in the main bundle is `state_5.sqlite`; desktop settings use `$CODEX_HOME/config.toml` and `.codex-global-state.json`.
-6. **Terminal/process integration:** `node-pty` is bundled, consistent with PTY-backed command execution. Native helpers include `codex-macos`, modifier/input monitors, HID topology, Launch Services integration, and device-key support.
-7. **Computer/browser use:** a separate Node runtime and packages are bundled under `cua_node`, including Playwright, OCR (`tesseract.js`), image processing (`sharp`), canvas, and an OpenAI `sky` package. A separately signed-looking nested `Codex Computer Use.app` contains service, client, installer, and lock-screen guardian executables.
-8. **Updates:** Sparkle is bundled and configured with an Ed25519 public key in `package.json`.
-9. **Deep links:** parsed routes include settings, threads, new threads, automations, skills, plugins, pets, connectors/OAuth, browser use, SSH connections, and shared ChatGPT conversations. The parser validates host, paths, and allowed query parameters rather than treating arbitrary links as commands.
-10. **Telemetry/network clues:** static bundles reference OpenAI/ChatGPT API, authentication, experimentation, telemetry, Sentry, and update hosts. Static strings establish possible code paths, not proof that every endpoint is contacted in a given session.
-
-## High-level inferred data flow
+The upstream application is an Electron renderer and main process connected to
+the Codex app server. The Linux package keeps that JavaScript application and
+replaces platform artifacts at its boundaries:
 
 ```text
-Electron renderer (web UI)
-        |
-        | restricted preload / Electron IPC
-        v
-Electron main process
-        |
-        | app-server request/event protocol
-        v
-Bundled native `codex` engine
-        |-- filesystem, Git, PTY/process execution
-        |-- sandbox and approval enforcement
-        |-- MCP, skills, plugins, configuration
-        `-- authenticated OpenAI/ChatGPT network APIs
-
-Separate CUA subsystem
-        `-- Playwright + native macOS computer-use services
+upstream renderer and main process
+              |
+       Linux Electron 41
+              |
+ Linux Codex CLI / app-server
+       |              |
+ better-sqlite3     node-pty
 ```
 
-The exact message schemas, trust checks, sandbox setup, credential storage, and network request flow require the next analysis pass. Dynamic behavior cannot be proven from this Linux host alone.
+The build extracts the checksum-verified DMG and ASAR, validates the expected
+layout and extraction warnings, rebuilds native modules for Linux x86-64, adds
+the Linux filesystem watcher, and stages one application tree. nFPM turns that
+tree into Debian and RPM packages. The pinned Debian 12 builder gives native
+modules a glibc 2.36 baseline.
 
-## Debian compatibility experiment
+## Evidence
 
-The extracted main process was launched on Debian using upstream Electron
-41.10.3, Linux builds of `better-sqlite3` and `node-pty`, and the installed
-`codex-cli 0.146.0` at `/usr/local/bin/codex`.
+The automated suite has verified:
 
-Verified runtime milestones:
+- sandboxed Electron startup and production renderer mounting;
+- a Linux Codex app-server handshake and project opening;
+- SQLite persistence across separate Electron processes;
+- PTY output, exit status, and cancellation;
+- filesystem watcher events;
+- Electron notification availability and `codex://` protocol registration;
+- an authenticated renderer-to-app-server turn that created the requested file.
 
-- application readiness and local migrations complete;
-- Linux Codex CLI spawned with app-server arguments;
-- initialize handshake succeeds and reports version `0.146.0`;
-- app-server state becomes connected;
-- IPC router listens on `$CODEX_HOME/ipc/ipc.sock`;
-- the production renderer mounts its application routes;
-- an authenticated model turn submitted through the packaged renderer completes
-  and creates the exact requested file in a disposable Git repository;
-- the installed Linux `better-sqlite3` build writes and reopens a database in
-  separate Electron processes;
-- the installed Linux `node-pty` build streams child output, preserves a
-  nonzero exit code, and terminates a running child;
-- successful renderer requests include configuration, models, threads,
-  permission profiles, plugins, MCP status, and collaboration modes;
-- the client configuration explicitly advertises downloadable
-  `linux-x86_64` primary-runtime bundles.
+The live test is opt-in because it consumes account usage. It deletes the exact
+test conversation through the app-server API, and cleanup failure fails the
+test.
 
-The prototype renders the authenticated production UI under Xvfb and is packaged
-as `codex-desktop-linux_26.727.40816-3_amd64.deb`. The installed package runs
-with Chromium's sandbox enabled, completes authenticated ChatGPT requests, loads
-projects and recent threads, reconciles bundled plugins, and initializes
-browser-use IPC.
+## Feature audit
 
-The Debian package was also rebuilt end to end from the untouched, checksum-
-verified DMG using the repository's TypeScript pipeline on 2026-08-02. The
-pipeline extracts the ASAR, explicitly validates the nine accepted relative-
-symlink warnings emitted by 7-Zip, rebuilds the declared Linux Electron
-native artifacts from pinned npm packages, assembles the package, and emits a
-build report. The skipped `cua_node` command links are not reconstructed because
-that macOS runtime is not included in the Debian package. The freshly generated
-package was installed and passed the automatic port-boundary tests.
+Deep links have a packaged-Linux path in the upstream main process. Desktop
+notifications and media APIs are supplied by Electron/Chromium. Projects,
+threads, Git, terminals, plugins, skills, MCP, automations, SSH connections,
+account flows, approvals, and shortcuts use the renderer or Codex app-server;
+they do not contain a missing macOS binary boundary in this release. Not all of
+these remote/UI workflows have dedicated end-to-end tests, so this is an
+architecture finding rather than a claim that every screen is certified.
 
-An initial native rebuild inherited glibc 2.42 from its build host, so its
-`node-pty` artifact could not load in a clean Debian 12 environment. Port
-revision 3 builds inside a pinned Debian 12 container, declares the native C++
-runtime dependencies, supplies the upstream-declared `@parcel/watcher` Linux
-runtime omitted from the macOS artifact, and passes the renderer, filesystem
-watcher, SQLite, and PTY boundary tests after installation in a separate clean
-Debian 12 container. The package also declares `xz-utils`, which the desktop
-runtime installer needs to unpack its Linux tool bundle. This establishes a
-glibc 2.36 deployment baseline; it does not make package bytes reproducible.
+Sparkle is macOS-only and is disabled by the upstream platform check. Linux
+updates are owned by APT/DNF and GitHub releases. Apple Events, Objective-C
+bridges, Launch Services helpers, and macOS permission services are not portable
+features; their relevant Linux equivalents are Electron, freedesktop desktop
+entries, Chromium permission handling, and desktop portals.
 
-These results do not demonstrate feature completeness. The automated packaged-
-UI turn test passed on 2026-08-03 but remains an explicit opt-in because it uses
-account quota. Its disposable conversation is permanently deleted by exact ID
-through the app-server API during teardown, and a cleanup failure fails the test. Voice, notifications,
-shortcuts, deep links, automations, SSH, browser-extension pairing, account
-lifecycle, and update behavior remain untested. The browser Node-REPL backend
-reports a missing runtime component. Computer use, Apple Events, Objective-C
-helpers, macOS permissions, and Sparkle cannot work as packaged because their
-implementations are macOS-native. The upstream Electron 41 compatibility
-runtime may also differ from OpenAI's customized Electron 42 runtime.
+## Remaining work
 
-A credible release test requires disposable-repository scenarios; real GNOME
-and KDE Wayland/X11 sessions; PipeWire audio; D-Bus notifications; an SSH test
-host; a browser test profile; suspend/resume testing; and hardware/software GPU
-coverage. Tests that consume model usage or change remote account state should
-be opt-in.
+Computer use remains the substantial port. Its bundled subsystem depends on
+separate macOS services and helpers. The browser Node-REPL backend also reports
+a missing runtime component and remains unavailable.
+
+The compatibility runtime is stock Electron `41.10.3`, while the analyzed macOS
+bundle uses customized Electron `42.3.0`. Host-specific behavior still merits
+testing on real GNOME and KDE Wayland/X11 sessions, particularly audio,
+notifications, keyring/portal prompts, suspend/resume, GPU behavior, browser
+pairing, and SSH hosts. Those are release-coverage tasks unless testing exposes
+a transformation or launcher defect.
+
+The port is currently x86-64 only and supports one pinned upstream DMG. RPM
+packaging shares the Debian-built glibc payload and therefore targets modern
+glibc distributions; it still requires a clean Fedora-family installation test
+before a public release should call it verified.

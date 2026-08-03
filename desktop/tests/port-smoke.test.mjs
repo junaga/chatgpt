@@ -5,7 +5,7 @@ import test from "node:test";
 import { createTestWorkspace, launchPackagedApp, terminate, waitForLog } from "./helpers/app-driver.mjs";
 
 const startupTimeout = Number(process.env.CODEX_DESKTOP_TEST_TIMEOUT || 60_000);
-const packageRoot = process.env.CODEX_DESKTOP_PACKAGE_ROOT || "/opt/codex-desktop-linux";
+const packageRoot = process.env.CODEX_DESKTOP_PACKAGE_ROOT || "/opt/chatgpt";
 
 test("packaged Linux app starts, mounts its renderer, and opens a Git project", { timeout: startupTimeout + 10_000 }, async t => {
   const sandbox = await stat(path.join(packageRoot, "chrome-sandbox"));

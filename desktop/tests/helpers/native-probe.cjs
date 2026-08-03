@@ -1,7 +1,7 @@
 const path = require("node:path");
 const { writeFile } = require("node:fs/promises");
 
-const packageRoot = process.env.CODEX_DESKTOP_PACKAGE_ROOT || "/opt/codex-desktop-linux";
+const packageRoot = process.env.CODEX_DESKTOP_PACKAGE_ROOT || "/opt/chatgpt";
 const vendorModules = process.env.CODEX_DESKTOP_VENDOR_MODULES ||
   path.join(packageRoot, "resources", "app", "vendor-app", "node_modules");
 
@@ -95,6 +95,12 @@ async function watcherProbe(directory) {
   }
 }
 
+function desktopProbe() {
+  const { Notification, app } = require("electron");
+  if (!Notification.isSupported()) throw new Error("Electron notifications are unavailable");
+  if (!app.isDefaultProtocolClient("codex")) throw new Error("codex:// is not registered for this package");
+}
+
 const [probe, ...arguments_] = process.argv.slice(2);
 const task = probe === "sqlite"
   ? sqliteProbe(arguments_[0], arguments_[1])
@@ -104,5 +110,7 @@ const task = probe === "sqlite"
       ? ptyKillProbe()
       : probe === "watcher"
         ? watcherProbe(arguments_[0])
+        : probe === "desktop"
+          ? app.whenReady().then(desktopProbe).finally(() => app.quit())
         : Promise.reject(new Error(`Unknown native probe: ${probe}`));
 task.catch(fail);

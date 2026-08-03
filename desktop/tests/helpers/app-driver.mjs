@@ -8,7 +8,7 @@ import { chromium } from "playwright-core";
 
 const packageRoot = process.env.CODEX_DESKTOP_PACKAGE_ROOT;
 const executable = process.env.CODEX_DESKTOP_EXECUTABLE ||
-  (packageRoot ? `${packageRoot}/codex-desktop` : "/usr/bin/codex-desktop");
+  (packageRoot ? `${packageRoot}/codex-desktop` : "/usr/bin/chatgpt");
 
 export async function createTestWorkspace(prefix) {
   const root = await mkdtemp(path.join(os.tmpdir(), prefix));

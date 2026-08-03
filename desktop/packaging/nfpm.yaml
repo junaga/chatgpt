@@ -1,0 +1,79 @@
+name: chatgpt
+arch: amd64
+platform: linux
+version: ${PACKAGE_VERSION}
+release: ${PACKAGE_RELEASE}
+version_schema: none
+section: devel
+priority: optional
+maintainer: ChatGPT Linux contributors <noreply@github.com>
+description: |-
+  Experimental ChatGPT Codex desktop compatibility port for Linux.
+  Runs the upstream desktop renderer with Linux Electron, native modules,
+  and the Codex CLI. This is an independent project, not an OpenAI product.
+vendor: ChatGPT Linux contributors
+homepage: https://github.com/junaga/chatgpt-linux
+license: Proprietary upstream application; independent port tooling
+umask: 0o022
+contents:
+  - src: ${PACKAGE_ROOT}/
+    dst: /
+    expand: true
+    type: tree
+overrides:
+  deb:
+    depends:
+      - libasound2
+      - libatk-bridge2.0-0
+      - libatk1.0-0
+      - libc6
+      - libcairo2
+      - libcups2
+      - libdbus-1-3
+      - libdrm2
+      - libgbm1
+      - libgcc-s1
+      - libglib2.0-0
+      - libgtk-3-0
+      - libnspr4
+      - libnss3
+      - libpango-1.0-0
+      - libstdc++6
+      - libx11-6
+      - libxcb1
+      - libxcomposite1
+      - libxdamage1
+      - libxext6
+      - libxfixes3
+      - libxkbcommon0
+      - libxrandr2
+      - xdg-utils
+      - xz-utils
+    recommends:
+      - codex
+  rpm:
+    depends:
+      - alsa-lib
+      - at-spi2-atk
+      - atk
+      - cairo
+      - cups-libs
+      - dbus-libs
+      - gtk3
+      - libdrm
+      - libX11
+      - libxcb
+      - libXcomposite
+      - libXdamage
+      - libXext
+      - libXfixes
+      - libxkbcommon
+      - libXrandr
+      - mesa-libgbm
+      - nspr
+      - nss
+      - pango
+      - xdg-utils
+      - xz
+rpm:
+  summary: Experimental ChatGPT Codex desktop compatibility port
