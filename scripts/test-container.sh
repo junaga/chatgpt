@@ -6,7 +6,7 @@ mode="${1:-local}"
 deb="${CODEX_DESKTOP_DEB:-}"
 
 if [ -z "$deb" ]; then
-  set -- "$repository"/dist/chatgpt-linux.deb
+  set -- "$repository"/dist/chatgpt.deb
   if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
     echo "Set CODEX_DESKTOP_DEB to exactly one Debian package" >&2
     exit 2

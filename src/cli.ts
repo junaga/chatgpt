@@ -220,7 +220,7 @@ async function packageFormats(packageRoot: string, output: string, formats: Opti
   await mkdir(output, { recursive: true });
   const artifacts: string[] = [];
   for (const format of formats) {
-    const filename = format === "archlinux" ? "chatgpt-linux.pkg.tar.zst" : `chatgpt-linux.${format}`;
+    const filename = format === "archlinux" ? "chatgpt.pkg.tar.zst" : `chatgpt.${format}`;
     const artifact = path.join(output, filename);
     await rm(artifact, { force: true });
     if (format === "tar.gz") {

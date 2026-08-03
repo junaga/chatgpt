@@ -26,7 +26,14 @@ test("NixOS and Gentoo recipes consume the revision-four root tarball", async ()
   const nix = await readFile(new URL("nix/default.nix", repositoryPackaging), "utf8");
   const gentoo = await readFile(new URL("gentoo/chatgpt-26.727.40816_p4.ebuild", repositoryPackaging), "utf8");
   for (const recipe of [nix, gentoo]) {
-    assert.match(recipe, /upstream-26\.727\.40816-port\.4\/chatgpt-linux\.tar\.gz/);
+    assert.match(recipe, /upstream-26\.727\.40816-port\.4\/chatgpt\.tar\.gz/);
   }
   assert.doesNotMatch(nix, /AAAA/);
+});
+
+test("release artifacts use the short chatgpt basename", async () => {
+  const cli = await readFile(new URL("../src/cli.ts", import.meta.url), "utf8");
+  assert.match(cli, /"chatgpt\.pkg\.tar\.zst"/);
+  assert.match(cli, /`chatgpt\.\$\{format\}`/);
+  assert.doesNotMatch(cli, /chatgpt-linux\.(?:deb|rpm|pkg\.tar\.zst|tar\.gz)/);
 });

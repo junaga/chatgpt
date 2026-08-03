@@ -8,9 +8,9 @@ independent project, not an official OpenAI release.
 Debian, Ubuntu, and related distributions:
 
 ```bash
-LINK=https://github.com/junaga/chatgpt-linux/releases/latest/download/chatgpt-linux.deb
-curl -fL "$LINK" > chatgpt-linux.deb
-sudo apt install ./chatgpt-linux.deb
+LINK=https://github.com/junaga/chatgpt-linux/releases/latest/download/chatgpt.deb
+curl -fL "$LINK" > chatgpt.deb
+sudo apt install ./chatgpt.deb
 ```
 
 The Codex CLI must also be installed and signed in. Start the app with
@@ -18,12 +18,12 @@ The Codex CLI must also be installed and signed in. Start the app with
 
 ## Downloads
 
-- Debian and Ubuntu: `chatgpt-linux.deb`
-- Fedora, RHEL, and openSUSE: `chatgpt-linux.rpm`
-- Arch Linux: `chatgpt-linux.pkg.tar.zst`
+- Debian and Ubuntu: `chatgpt.deb`
+- Fedora, RHEL, and openSUSE: `chatgpt.rpm`
+- Arch Linux: `chatgpt.pkg.tar.zst`
 - NixOS: `packaging/nix/default.nix`
 - Gentoo: `packaging/gentoo/chatgpt-26.727.40816_p4.ebuild`
-- Generic Linux files: `chatgpt-linux.tar.gz`
+- Generic Linux files: `chatgpt.tar.gz`
 
 AppImage, Snap, and Flatpak downloads are not built yet.
 
