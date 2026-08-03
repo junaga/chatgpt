@@ -16,7 +16,7 @@ APT shows the package as:
 
 > Package: chatgpt
 >
-> Version: 26.727.40816-6
+> Version: 26.727.40816-7
 >
 > Architecture: amd64
 >

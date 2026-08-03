@@ -53,20 +53,6 @@ function host(overrides: Record<string, unknown> = {}) {
   FakeBrowserWindow.instances = [];
   return pictureInPicture.createPictureInPictureHost({
     BrowserWindow: FakeBrowserWindow,
-    captureIntervalMs: 0,
-    desktopCapturer: {
-      async getSources(options: unknown) {
-        const request = options as { fetchWindowIcons: boolean; thumbnailSize: { width: number; height: number }; types: string[] };
-        assert.equal(request.fetchWindowIcons, false);
-        assert.deepEqual(request.types, ["screen"]);
-        assert.equal(request.thumbnailSize.width, request.thumbnailSize.height);
-        assert.ok(request.thumbnailSize.width >= 640 && request.thumbnailSize.width <= 1440);
-        return [
-          { display_id: "8", thumbnail: { toDataURL: () => png } },
-          { display_id: "7", thumbnail: { toDataURL: () => jpeg } },
-        ];
-      },
-    },
     screen,
     ...overrides,
   });
@@ -108,7 +94,27 @@ test("Linux PiP renders Browser Use screenshots and emits native visibility acti
   assert.equal(pip.hasRemoteHostedPIPContentActivePresentation(), false);
 });
 
-test("Linux PiP captures active Computer Use previews and forwards cursor and resize events", async () => {
+test("opening and focusing an ordinary chat creates no PiP, pet wake, or capture window", () => {
+  const petWakes: unknown[] = [];
+  const pip = host();
+  assert.equal(pip.startRemoteHostedPIPContentHost(), true);
+  assert.equal(pip.setRemoteHostedPIPContentPetWakeRequestHandler((...value: unknown[]) => petWakes.push(value)), true);
+  assert.equal(pip.setRemoteHostedPIPContentActiveThreadID("thread-ordinary"), true);
+  assert.equal(pip.registerRemoteHostedPIPContentHost({
+    anchorRect: { x: 30, y: 40, width: 20, height: 20 },
+    browserWindowId: 5,
+    contentBounds: { x: 100, y: 100, width: 900, height: 700 },
+    id: "main",
+    title: "ChatGPT",
+  }), true);
+
+  assert.equal(FakeBrowserWindow.instances.length, 0);
+  assert.deepEqual(petWakes, []);
+  assert.equal(pip.hasRemoteHostedPIPContentActivePresentation(), false);
+  assert.equal(pip.hasRemoteHostedPIPContentAnyPresentation(), false);
+});
+
+test("real Computer Use metadata opens PiP and forwards cursor and resize events", () => {
   const cursors: unknown[] = [];
   const sizes: number[] = [];
   const pip = host();
@@ -116,13 +122,12 @@ test("Linux PiP captures active Computer Use previews and forwards cursor and re
   pip.setRemoteHostedPIPContentComputerUseCursorLocationHandler((value: unknown) => cursors.push(value));
   pip.setRemoteHostedPIPContentMaxDisplaySizeChangedHandler((value: number) => sizes.push(value));
   assert.equal(pip.setRemoteHostedPIPContentActiveThreadID("thread-computer"), true);
-  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(pip.upsertComputerUsePIPContent("thread-computer", jpeg, "org.test.Editor"), true);
 
   const window = FakeBrowserWindow.instances[0];
   assert.ok(window.visible);
-  assert.match(decodedPage(window), /Computer Use/);
+  assert.match(decodedPage(window), /Computer Use — org\.test\.Editor/);
   assert.match(decodedPage(window), /data:image\/jpeg;base64/);
-  assert.match(decodedPage(window), /chatgpt-pip-action:\/\/next/);
   assert.deepEqual(cursors.at(-1), { isActive: true, x: 71, y: 92 });
   assert.equal(pip.hasRemoteHostedPIPContentActivePresentation(), true);
 
@@ -136,19 +141,62 @@ test("Linux PiP captures active Computer Use previews and forwards cursor and re
   assert.deepEqual(cursors.at(-1), { isActive: false, x: 71, y: 92 });
 });
 
+test("only completed node_repl Computer Use calls with screenshots become PiP presentations", () => {
+  const notification = {
+    method: "item/completed",
+    params: {
+      threadId: "thread-computer",
+      item: {
+        type: "mcpToolCall",
+        server: "node_repl",
+        result: {
+          _meta: {
+            "codex/toolSurface": {
+              kind: "computerUse",
+              app: { kind: "appId", appId: "org.test.Editor" },
+              screenshot: { url: jpeg },
+            },
+          },
+        },
+      },
+    },
+  };
+  assert.deepEqual(pictureInPicture.computerUsePresentationFromNotification(notification), {
+    appId: "org.test.Editor",
+    imageDataUrl: jpeg,
+    threadId: "thread-computer",
+  });
+  assert.equal(pictureInPicture.computerUsePresentationFromNotification({
+    ...notification,
+    params: { ...notification.params, item: { ...notification.params.item, server: "other" } },
+  }), null);
+  assert.equal(pictureInPicture.computerUsePresentationFromNotification({
+    ...notification,
+    params: {
+      ...notification.params,
+      item: {
+        ...notification.params.item,
+        result: { _meta: { "codex/toolSurface": { kind: "computerUse" } } },
+      },
+    },
+  }), null);
+});
+
 test("the pinned Sky contract is opened only for Linux and remains assertion checked", () => {
   const loader = "function xo({electronAppPath:e,resourcesPath:t}){let n=";
   const guards = Array.from({ length: 18 }, () => "if(r!==`darwin`)return!1;").join("");
   const wrappers = `function Ho({addon:e,controlTooltips:t,${guards}return{contentBounds:t.getContentBounds(),id:e,nativeWindowHandle:typeof t.getNativeWindowHandle==\`function\`?t.getNativeWindowHandle():null}}function filler(){}var os=n.fl({`;
   const manager = "ae=Cm({isEnabled:ie,isMacOS:j,nativeIntl:";
-  const patched = pictureInPicture.enableLinuxPictureInPicture(`${loader}${wrappers}${manager}`);
+  const subscription = "P.add(ls({appServerConnection:je(),isEnabled:ie})),P.add(Xne({appServerConnection:je(),closeActiveTurn:Be.closeActiveTurn}));";
+  const patched = pictureInPicture.enableLinuxPictureInPicture(`${loader}${wrappers}${manager}${subscription}`);
 
   assert.match(patched, /linux-runtime.*picture-in-picture\.cjs/);
   assert.match(patched, /r!==`darwin`&&r!==`linux`/);
   assert.match(patched, /browserWindowId:t\.id/);
   assert.match(patched, /isMacOS:j\|\|process\.platform===`linux`/);
+  assert.match(patched, /subscribeComputerUsePIPMetadata/);
   assert.throws(
-    () => pictureInPicture.enableLinuxPictureInPicture(`${loader}${wrappers.replace(guards, guards.slice(0, -"if(r!==`darwin`)return!1;".length))}${manager}`),
+    () => pictureInPicture.enableLinuxPictureInPicture(`${loader}${wrappers.replace(guards, guards.slice(0, -"if(r!==`darwin`)return!1;".length))}${manager}${subscription}`),
     /Expected 18/,
   );
   assert.throws(() => pictureInPicture.enableLinuxPictureInPicture("missing"), /exactly one/);

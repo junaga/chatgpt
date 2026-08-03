@@ -3,7 +3,7 @@
 // deliberately assertion checked against the pinned upstream bundle.
 
 const LINUX_CLIENT_SHA256 =
-  "47c325bd1b4bf870425dfcea90b1e19661c0b6450d61f7b78dfdaed0ce530b35";
+  "42ee527f13910d50e3b688b12c72db08d8c42514392144fe773f5d2d359d26d8";
 
 const FEATURE_NORMALIZATION =
   "let i=r===`win32`&&e.computerUse===!0?{...e,computerUseNodeRepl:!0}:e,o=r===`win32`&&n.CODEX_ELECTRON_ENABLE_WINDOWS_COMPUTER_USE===`1`?{...i,computerUse:!0,computerUseNodeRepl:!0}:i";

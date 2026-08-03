@@ -15,6 +15,10 @@ const PIP_HOST_WINDOW_LINUX =
 const PIP_MANAGER_BOUNDARY = "ae=Cm({isEnabled:ie,isMacOS:j,nativeIntl:";
 const PIP_MANAGER_LINUX =
   "ae=Cm({isEnabled:ie,isMacOS:j||process.platform===`linux`,nativeIntl:";
+const PIP_SUBSCRIPTION_BOUNDARY =
+  "P.add(ls({appServerConnection:je(),isEnabled:ie})),P.add(Xne({appServerConnection:je(),closeActiveTurn:Be.closeActiveTurn}));";
+const PIP_SUBSCRIPTION_LINUX =
+  "P.add(ls({appServerConnection:je(),isEnabled:ie})),process.platform===`linux`&&P.add(require(p.default.join(process.resourcesPath,`linux-runtime`,`picture-in-picture.cjs`)).subscribeComputerUsePIPMetadata(je())),P.add(Xne({appServerConnection:je(),closeActiveTurn:Be.closeActiveTurn}));";
 
 function replaceExactlyOnce(source, before, after, label) {
   const first = source.indexOf(before);
@@ -53,11 +57,17 @@ function enableLinuxPictureInPicture(source) {
     PIP_HOST_WINDOW_LINUX,
     "Picture-in-Picture host window",
   );
-  return replaceExactlyOnce(
+  patched = replaceExactlyOnce(
     patched,
     PIP_MANAGER_BOUNDARY,
     PIP_MANAGER_LINUX,
     "Picture-in-Picture manager",
+  );
+  return replaceExactlyOnce(
+    patched,
+    PIP_SUBSCRIPTION_BOUNDARY,
+    PIP_SUBSCRIPTION_LINUX,
+    "Picture-in-Picture Computer Use subscription",
   );
 }
 
@@ -95,13 +105,8 @@ function clamp(value, minimum, maximum) {
 
 function createPictureInPictureHost({
   BrowserWindow,
-  desktopCapturer,
   screen,
-  environment = process.env,
   logger = console,
-  captureIntervalMs = 1_000,
-  setInterval_ = setInterval,
-  clearInterval_ = clearInterval,
 } = {}) {
   if (typeof BrowserWindow !== "function" || !screen) {
     throw new TypeError("Electron BrowserWindow and screen APIs are required");
@@ -110,14 +115,10 @@ function createPictureInPictureHost({
   const state = {
     activeThreadId: null,
     browserPresentations: new Map(),
-    captureError: null,
-    captureInFlight: false,
-    captureTimer: null,
-    completedThreads: new Set(),
+    computerUsePresentations: new Map(),
     controlTooltips: { hide: "Hide", placement: "Send Picture-in-Picture to Pet" },
     cursorHandler: null,
     cursorIsActive: false,
-    desktopPresentations: [],
     hostRegistrations: new Map(),
     maxDisplaySize: DEFAULT_MAX_DISPLAY_SIZE,
     maxDisplaySizeChangedHandler: null,
@@ -131,28 +132,15 @@ function createPictureInPictureHost({
   };
 
   function orderedPresentations() {
-    const available = [...state.browserPresentations.values()]
+    const available = [
+      ...state.browserPresentations.values(),
+      ...state.computerUsePresentations.values(),
+    ]
       .filter(presentation => !state.suppressedThreadIds.has(presentation.threadId));
     if (state.activeThreadId && !state.suppressedThreadIds.has(state.activeThreadId)) {
       const active = available.filter(presentation => presentation.threadId === state.activeThreadId);
       const others = available.filter(presentation => presentation.threadId !== state.activeThreadId);
-      const desktops = [];
-      if (!state.completedThreads.has(state.activeThreadId)) {
-        if (state.desktopPresentations.length === 0) {
-          desktops.push({
-            id: `computer-use:${state.activeThreadId}`,
-            imageDataUrl: null,
-            kind: "computer-use",
-            threadId: state.activeThreadId,
-            title: "Computer Use",
-          });
-        } else {
-          for (const desktop of state.desktopPresentations) {
-            desktops.push({ ...desktop, threadId: state.activeThreadId });
-          }
-        }
-      }
-      return [...active, ...desktops, ...others];
+      return [...active, ...others];
     }
     return available;
   }
@@ -211,7 +199,7 @@ function createPictureInPictureHost({
     const presentations = orderedPresentations();
     const image = presentation.imageDataUrl
       ? `<img src="${presentation.imageDataUrl}" alt="${escapeHtml(presentation.title)} preview">`
-      : `<div class="empty">${escapeHtml(state.captureError || "Waiting for the desktop preview…")}</div>`;
+      : `<div class="empty">Preview unavailable</div>`;
     const thread = presentation.threadId ? `<span>${escapeHtml(presentation.threadId)}</span>` : "";
     const next = presentations.length > 1
       ? `<a class="control" href="${ACTION_SCHEME}//next" title="Next preview" aria-label="Next preview">›</a>`
@@ -325,71 +313,8 @@ function createPictureInPictureHost({
     setCursorActive(presentation.kind === "computer-use");
   }
 
-  async function captureDesktop() {
-    if (state.captureInFlight || !desktopCapturer?.getSources) return;
-    const presentation = selectedPresentation();
-    if (presentation?.kind !== "computer-use" || !state.started || !state.visible) return;
-    state.captureInFlight = true;
-    try {
-      const size = Math.round(clamp(state.maxDisplaySize * 2, 640, 1440));
-      const sources = await desktopCapturer.getSources({
-        fetchWindowIcons: false,
-        thumbnailSize: { width: size, height: size },
-        types: ["screen"],
-      });
-      const primaryId = String(screen.getPrimaryDisplay?.()?.id ?? "");
-      const orderedSources = [...sources].sort((left, right) =>
-        Number(String(right.display_id ?? "") === primaryId) - Number(String(left.display_id ?? "") === primaryId));
-      const desktops = orderedSources.flatMap((source, index) => {
-        const imageDataUrl = source?.thumbnail?.toDataURL?.();
-        return validImageDataUrl(imageDataUrl) ? [{
-          id: `computer-use:${state.activeThreadId}:${String(source.display_id ?? index)}`,
-          imageDataUrl,
-          kind: "computer-use",
-          title: orderedSources.length === 1 ? "Computer Use" : `Computer Use — Display ${index + 1}`,
-        }] : [];
-      });
-      if (desktops.length === 0) {
-        throw new Error("the compositor returned no screen thumbnail");
-      }
-      state.desktopPresentations = desktops;
-      state.captureError = null;
-      render();
-    } catch (error) {
-      state.captureError = `Desktop preview unavailable: ${error instanceof Error ? error.message : String(error)}`;
-      logger.warn?.("Unable to capture Linux Computer Use PiP preview", error);
-      // A denied Wayland ScreenCast request can present a chooser. Do not
-      // repeatedly reopen it; a new turn or explicit invalidation can retry.
-      if (environment.XDG_SESSION_TYPE?.toLowerCase() === "wayland" && state.captureTimer != null) {
-        clearInterval_(state.captureTimer);
-        state.captureTimer = null;
-      }
-      render();
-    } finally {
-      state.captureInFlight = false;
-    }
-  }
-
-  function reconcileCaptureTimer() {
-    const needsCapture = state.started && state.visible && selectedPresentation()?.kind === "computer-use";
-    if (!needsCapture) {
-      if (state.captureTimer != null) clearInterval_(state.captureTimer);
-      state.captureTimer = null;
-      return;
-    }
-    if (captureIntervalMs <= 0) {
-      void captureDesktop();
-    } else if (state.captureTimer == null) {
-      // Give Browser Use metadata a moment to arrive before asking for a
-      // desktop capture. Browser presentations replace this timer immediately.
-      state.captureTimer = setInterval_(() => void captureDesktop(), captureIntervalMs);
-      state.captureTimer?.unref?.();
-    }
-  }
-
   function reconcile() {
     render();
-    reconcileCaptureTimer();
   }
 
   const api = {
@@ -406,25 +331,17 @@ function createPictureInPictureHost({
 
     stopRemoteHostedPIPContentHost() {
       state.started = false;
-      if (state.captureTimer != null) clearInterval_(state.captureTimer);
-      state.captureTimer = null;
       setCursorActive(false);
       state.window?.destroy?.();
       state.window = null;
       state.browserPresentations.clear();
-      state.desktopPresentations = [];
-      state.captureError = null;
+      state.computerUsePresentations.clear();
       return true;
     },
 
     setRemoteHostedPIPContentActiveThreadID(threadId) {
       if (threadId != null && typeof threadId !== "string") return false;
-      if (state.activeThreadId !== threadId) {
-        state.desktopPresentations = [];
-        state.captureError = null;
-      }
       state.activeThreadId = threadId;
-      if (threadId) state.completedThreads.delete(threadId);
       state.selectionOffset = 0;
       reconcile();
       return true;
@@ -510,7 +427,7 @@ function createPictureInPictureHost({
 
     completeRemoteHostedPIPContentThread(threadId) {
       if (typeof threadId !== "string" || threadId.trim() === "") return false;
-      state.completedThreads.add(threadId);
+      state.computerUsePresentations.delete(threadId);
       for (const [id, presentation] of state.browserPresentations) {
         if (presentation.threadId === threadId) state.browserPresentations.delete(id);
       }
@@ -522,7 +439,27 @@ function createPictureInPictureHost({
       if (typeof threadId !== "string" || threadId.trim() === "" || typeof turnId !== "string" || turnId.trim() === "") {
         return false;
       }
-      if (state.activeThreadId === threadId) void captureDesktop();
+      state.computerUsePresentations.delete(threadId);
+      reconcile();
+      return true;
+    },
+
+    upsertComputerUsePIPContent(threadId, imageDataUrl, appId = null) {
+      if (
+        typeof threadId !== "string" || threadId.trim() === "" ||
+        !validImageDataUrl(imageDataUrl) ||
+        appId != null && typeof appId !== "string"
+      ) {
+        return false;
+      }
+      state.computerUsePresentations.set(threadId, {
+        id: `computer-use:${threadId}`,
+        imageDataUrl,
+        kind: "computer-use",
+        threadId,
+        title: appId?.trim() ? `Computer Use — ${appId.trim()}` : "Computer Use",
+      });
+      reconcile();
       return true;
     },
 
@@ -544,7 +481,6 @@ function createPictureInPictureHost({
         threadId,
         title: "Browser Use",
       });
-      state.completedThreads.delete(threadId);
       reconcile();
       return true;
     },
@@ -563,10 +499,47 @@ function createPictureInPictureHost({
 let defaultHost;
 function getDefaultHost() {
   if (!defaultHost) {
-    const { BrowserWindow, desktopCapturer, screen } = require("electron");
-    defaultHost = createPictureInPictureHost({ BrowserWindow, desktopCapturer, screen });
+    const { BrowserWindow, screen } = require("electron");
+    defaultHost = createPictureInPictureHost({ BrowserWindow, screen });
   }
   return defaultHost;
+}
+
+function computerUsePresentationFromNotification(notification) {
+  if (
+    notification?.method !== "item/completed" ||
+    typeof notification.params?.threadId !== "string" ||
+    notification.params.threadId.trim() === ""
+  ) {
+    return null;
+  }
+  const item = notification.params.item;
+  if (item?.type !== "mcpToolCall" || item.server !== "node_repl") return null;
+  const surface = item.result?._meta?.["codex/toolSurface"];
+  if (surface?.kind !== "computerUse" || !validImageDataUrl(surface.screenshot?.url)) return null;
+  const appId = surface.app?.kind === "appId" && typeof surface.app.appId === "string"
+    ? surface.app.appId
+    : null;
+  return {
+    appId,
+    imageDataUrl: surface.screenshot.url,
+    threadId: notification.params.threadId,
+  };
+}
+
+function subscribeComputerUsePIPMetadata(appServerConnection) {
+  if (typeof appServerConnection?.registerInternalNotificationHandler !== "function") {
+    throw new TypeError("Computer Use PiP requires an app-server notification connection");
+  }
+  return appServerConnection.registerInternalNotificationHandler(notification => {
+    const presentation = computerUsePresentationFromNotification(notification);
+    if (!presentation) return;
+    getDefaultHost().upsertComputerUsePIPContent(
+      presentation.threadId,
+      presentation.imageDataUrl,
+      presentation.appId,
+    );
+  });
 }
 
 const nativeMethods = [
@@ -592,8 +565,10 @@ const nativeMethods = [
 
 module.exports = {
   ACTION_SCHEME,
+  computerUsePresentationFromNotification,
   createPictureInPictureHost,
   enableLinuxPictureInPicture,
+  subscribeComputerUsePIPMetadata,
 };
 for (const method of nativeMethods) {
   module.exports[method] = (...arguments_) => getDefaultHost()[method](...arguments_);

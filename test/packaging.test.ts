@@ -24,9 +24,9 @@ test("the desktop entry declares the chatgpt command and codex links", async () 
 
 test("NixOS and Gentoo recipes consume the current revision root tarball", async () => {
   const nix = await readFile(new URL("nix/default.nix", repositoryPackaging), "utf8");
-  const gentoo = await readFile(new URL("gentoo/chatgpt-26.727.40816_p6.ebuild", repositoryPackaging), "utf8");
+  const gentoo = await readFile(new URL("gentoo/chatgpt-26.727.40816_p7.ebuild", repositoryPackaging), "utf8");
   for (const recipe of [nix, gentoo]) {
-    assert.match(recipe, /upstream-26\.727\.40816-port\.6\/chatgpt\.tar\.gz/);
+    assert.match(recipe, /upstream-26\.727\.40816-port\.7\/chatgpt\.tar\.gz/);
   }
   assert.doesNotMatch(nix, /AAAA/);
 });
@@ -51,6 +51,8 @@ test("release artifacts use the short chatgpt basename", async () => {
   assert.match(dockerfile, /--no-static-deltas --or-update/);
   assert.match(dockerfile, /flatpak_attempt.*-ge 5/);
   assert.match(containerBuild, /mktemp -d/);
+  assert.match(containerBuild, /--env TMPDIR=\/work\/tmp/);
+  assert.match(containerBuild, /CODEX_DESKTOP_FORMATS/);
   assert.match(containerBuild, /src=\$build_work,dst=\/work/);
   assert.doesNotMatch(cli, /chatgpt-linux\.(?:deb|rpm|pkg\.tar\.zst|tar\.gz)/);
   assert.doesNotMatch(cli, /chatgpt-linux\.build\.json/);

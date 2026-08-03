@@ -15,12 +15,22 @@ const linuxRuntime = fs.existsSync(packagedVendorApp)
 const { installLinuxMainBundlePatches } = require(path.join(linuxRuntime, "main-bundle-patches.cjs"));
 const { installNotificationIntegration } = require(path.join(linuxRuntime, "notifications.cjs"));
 const { prepareChromeNativeHost } = require(path.join(linuxRuntime, "chrome-native-host.cjs"));
+const { migrateRevision6PetWake } = require(path.join(linuxRuntime, "state-migrations.cjs"));
+const { configureNativeWayland } = require(path.join(linuxRuntime, "wayland.cjs"));
 const systemCodex =
   process.env.CODEX_CLI_PATH ||
   process.env.CODEX_DESKTOP_CODEX_PATH ||
   "";
 const packagedCodex = path.join(analysisRoot, "codex");
 const linuxCodex = fs.existsSync(packagedCodex) ? packagedCodex : systemCodex;
+
+// Electron 41 normally selects Wayland automatically. Make the choice explicit
+// so mixed X11/Wayland environments never fall back to XWayland accidentally.
+configureNativeWayland(app);
+
+// Revision 6 accidentally woke and persisted the pet when any chat opened.
+// Clear that stale flag once; later user-initiated pet choices persist normally.
+migrateRevision6PetWake();
 
 // Match the normal Codex profile unless an isolated test profile is requested.
 if (process.env.CODEX_DESKTOP_DEBUG_PORT) {

@@ -23,6 +23,8 @@ kept. The build replaces only their macOS boundaries:
   Desktop portals. The system-wide shortcut depends on compositor support.
 - The complete 18-method Picture-in-Picture contract is implemented with an
   always-on-top Electron surface for Browser Use and Computer Use previews.
+- Wayland sessions explicitly select Electron's native Wayland backend instead
+  of relying on Chromium's automatic X11/Wayland choice.
 
 ## Browser Use
 
@@ -56,6 +58,11 @@ packaged plugin retains the upstream workflow and confirmation policy.
   ScreenCast session.
 - XWayland is never used silently for a native Wayland desktop. An explicit
   opt-in remains available for unusual compositor setups.
+
+Desktop permission requests are invocation-scoped. Merely opening or focusing
+a chat does not capture the screen, open Picture-in-Picture, or wake the pet.
+After an approved Computer Use state request, Picture-in-Picture reuses that
+request's screenshot and never starts a second capture session.
 
 Linux capture returns the full desktop rather than a cropped app window because
 Sky and the portal do not expose a reliable cross-display crop under mixed
@@ -91,7 +98,15 @@ The repository has unit and static tests for every Linux boundary, protocol,
 patch assertion, and package recipe. Release builds also verify package
 metadata and checksums. No desktop integration tests were added.
 
-This revision is x86-64 only and tied to one upstream DMG. It uses stock
+This revision is x86-64 only and tied to one upstream DMG. The model-facing
+Browser Use tool schemas and Computer Use `sky` API match upstream, but the
+Linux browser coordinator and desktop backends are compatible
+reimplementations rather than Apple's native services. Screenshot framing,
+AT-SPI richness, portal behavior, and compositor support can affect practical
+reliability, so identical model output quality across every app and desktop is
+not guaranteed.
+
+It uses stock
 Electron `41.10.3` while that macOS release carries customized Electron
 `42.3.0`. Real desktop behavior still varies with keyring state, portal and
 compositor support, GPU/audio drivers, and browser installation.

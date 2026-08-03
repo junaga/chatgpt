@@ -176,3 +176,43 @@ test("Linux sky client combines AT-SPI state with bundled X11 Sky capture and fa
     { method: "click", input: { x: 30, y: 30 } },
   ]);
 });
+
+test("Computer Use publishes PiP metadata only after an approved state capture", async t => {
+  const original = runtimeGlobals.nodeRepl;
+  t.after(() => { runtimeGlobals.nodeRepl = original; });
+  const responseMeta: unknown[] = [];
+  runtimeGlobals.nodeRepl = {
+    async createElicitation() { return { action: "accept" }; },
+    async withSuspendedTimeout(operation: () => Promise<unknown>) { return await operation(); },
+    setResponseMeta(value: unknown) { responseMeta.push(value); },
+  };
+  const screenshot = `data:image/png;base64,${Buffer.from("approved-screen").toString("base64")}`;
+  const client = createClient({
+    environment: { XDG_SESSION_TYPE: "wayland", WAYLAND_DISPLAY: "wayland-1" },
+    transport: {
+      async request(method: string) {
+        return method === "get_app_state"
+          ? { type: "app_state", value: { app: "Editor", screenshot: { url: screenshot }, text: "tree" } }
+          : { type: "action_complete" };
+      },
+      close() {},
+    },
+  });
+
+  await client.get_app_state({ app: "Editor" });
+  assert.deepEqual(responseMeta.at(-1), {
+    "codex/toolSurface": {
+      kind: "computerUse",
+      app: { kind: "appId", appId: "Editor" },
+      screenshot: { url: screenshot },
+    },
+  });
+  await client.click({ app: "Editor", element_index: 1 });
+  assert.deepEqual(responseMeta.at(-1), {
+    "codex/toolSurface": {
+      kind: "computerUse",
+      app: { kind: "appId", appId: "Editor" },
+      screenshot: { url: screenshot },
+    },
+  });
+});

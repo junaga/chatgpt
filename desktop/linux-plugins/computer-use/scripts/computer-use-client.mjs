@@ -1,9 +1,11 @@
 import { spawn } from "node:child_process";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const PROTOCOL_VERSION = 1;
 const MAX_FRAME_BYTES = 16 * 1024 * 1024;
+const MAX_PIP_SCREENSHOT_BYTES = 64 * 1024 * 1024;
 const RUNTIME_KEY = Symbol.for("openai.computer-use.runtime");
 const CHROME_COMPUTER_USE_META_KEY = "codex/computerUseChrome";
 const CHROME_APP_PATTERN = /(?:^|[\\/])(?:google-chrome|chromium|chrome)(?:[\\/]|$)/i;
@@ -227,15 +229,39 @@ async function suspended(operation) {
   return typeof suspend === "function" ? await suspend(operation) : await operation();
 }
 
-function setToolSurface(app = null) {
+function setToolSurface(app = null, screenshotUrl = null) {
   const meta = {
     "codex/toolSurface": {
       kind: "computerUse",
       app: app == null ? null : { kind: "appId", appId: app },
+      ...(screenshotUrl == null ? {} : { screenshot: { url: screenshotUrl } }),
     },
   };
   if (app != null && isChromeApp(app)) meta[CHROME_COMPUTER_USE_META_KEY] = true;
   nodeRepl()?.setResponseMeta?.(meta);
+}
+
+async function imageDataUrl(value) {
+  if (typeof value !== "string" || value.length === 0) return null;
+  if (value.startsWith("data:image/")) {
+    return value.length <= Math.ceil(MAX_PIP_SCREENSHOT_BYTES / 3) * 4 + 128 ? value : null;
+  }
+  let url;
+  try { url = new URL(value); }
+  catch { return null; }
+  if (url.protocol !== "file:") return null;
+  try {
+    const details = await stat(url);
+    if (!details.isFile() || details.size > MAX_PIP_SCREENSHOT_BYTES) return null;
+    const data = await readFile(url);
+    const extension = path.extname(fileURLToPath(url)).toLowerCase();
+    const mime = extension === ".jpg" || extension === ".jpeg"
+      ? "image/jpeg"
+      : extension === ".webp" ? "image/webp" : "image/png";
+    return `data:${mime};base64,${data.toString("base64")}`;
+  } catch {
+    return null;
+  }
 }
 
 function isChromeApp(app) {
@@ -250,6 +276,7 @@ export function createClient(options = {}) {
   const environment = runtimeEnvironment(options.environment);
   let rawClientPromise;
   const approvedApps = new Set();
+  const screenshotByApp = new Map();
   const pendingApprovals = new Map();
 
   async function rawClient() {
@@ -300,7 +327,7 @@ export function createClient(options = {}) {
     const app = requiredApp(normalized, method);
     setToolSurface(null);
     await approve(app);
-    setToolSurface(app);
+    setToolSurface(app, screenshotByApp.get(app.toLowerCase()) ?? null);
     return await suspended(() => transport.request(method, makeParams(normalized)));
   }
 
@@ -365,34 +392,41 @@ export function createClient(options = {}) {
       return resultValue(await suspended(() => transport.request("list_apps")), "apps");
     },
     async get_app_state(input) {
+      const normalized = plainInput(input, "get_app_state");
+      const app = requiredApp(normalized, "get_app_state");
       const result = await appRequest("get_app_state", input, value => ({
         app: requiredApp(value, "get_app_state"),
         disableDiff: value.disableDiff === true,
       }));
-      const state = resultValue(result, "app_state");
-      if (state.screenshot != null || !x11RawInputAllowed(environment)) return state;
-      let screenshots;
-      try {
-        screenshots = await (await rawClient()).get_screenshot();
-      } catch (error) {
-        return {
-          ...state,
-          text: `${state.text}\nScreenshot unavailable: ${errorText(error)}`,
-        };
+      let state = resultValue(result, "app_state");
+      if (state.screenshot == null && x11RawInputAllowed(environment)) {
+        let screenshots;
+        try {
+          screenshots = await (await rawClient()).get_screenshot();
+        } catch (error) {
+          state = {
+            ...state,
+            text: `${state.text}\nScreenshot unavailable: ${errorText(error)}`,
+          };
+        }
+        const first = screenshots?.[0];
+        const url = typeof first?.filepath === "string" && first.filepath
+          ? pathToFileURL(first.filepath).href
+          : first?.data_url;
+        if (typeof url === "string" && url) {
+          state = {
+            ...state,
+            screenshot: { url },
+            text: screenshots.length > 1
+              ? `${state.text}\nFull-desktop capture includes ${screenshots.length} displays; screenshot contains display 1.`
+              : state.text,
+          };
+        }
       }
-      const first = screenshots[0];
-      if (!first) return state;
-      const url = typeof first.filepath === "string" && first.filepath
-        ? pathToFileURL(first.filepath).href
-        : first.data_url;
-      if (typeof url !== "string" || !url) return state;
-      return {
-        ...state,
-        screenshot: { url },
-        text: screenshots.length > 1
-          ? `${state.text}\nFull-desktop capture includes ${screenshots.length} displays; screenshot contains display 1.`
-          : state.text,
-      };
+      const screenshot = await imageDataUrl(state.screenshot?.url);
+      if (screenshot != null) screenshotByApp.set(app.toLowerCase(), screenshot);
+      setToolSurface(app, screenshot);
+      return state;
     },
     click: input => action("click", input),
     drag: input => action("drag", input),
