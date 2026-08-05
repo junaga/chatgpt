@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 
 export interface UpstreamRelease {
   portRevision: number;
-  dmgSha256: string;
+  archiveSha256: string;
   appPath: string;
   nativeArtifacts: Record<string, string[]>;
   acceptedExtractionWarnings: string[];
@@ -18,8 +18,8 @@ function requiredString(value: unknown, name: string): string {
 export function validateUpstream(input: unknown): UpstreamRelease {
   if (!input || typeof input !== "object") throw new Error("Upstream metadata must be an object");
   const value = input as Record<string, unknown>;
-  const checksum = requiredString(value.dmgSha256, "dmgSha256");
-  if (!/^[a-f0-9]{64}$/.test(checksum)) throw new Error("Upstream field dmgSha256 must be a lowercase SHA-256");
+  const checksum = requiredString(value.archiveSha256, "archiveSha256");
+  if (!/^[a-f0-9]{64}$/.test(checksum)) throw new Error("Upstream field archiveSha256 must be a lowercase SHA-256");
   if (!value.nativeArtifacts || typeof value.nativeArtifacts !== "object" || Array.isArray(value.nativeArtifacts)) {
     throw new Error("Upstream field nativeArtifacts must be an object");
   }
@@ -38,7 +38,7 @@ export function validateUpstream(input: unknown): UpstreamRelease {
   }
   return {
     portRevision: Number(value.portRevision),
-    dmgSha256: checksum,
+    archiveSha256: checksum,
     appPath: requiredString(value.appPath, "appPath"),
     nativeArtifacts: nativeArtifacts as Record<string, string[]>,
     acceptedExtractionWarnings: [...value.acceptedExtractionWarnings],

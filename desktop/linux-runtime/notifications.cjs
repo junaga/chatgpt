@@ -228,9 +228,9 @@ function installNotificationIntegration({
 }
 
 const SYSTEM_PERMISSIONS_GUARD =
-  "systemPermissions:process.platform===`darwin`||process.platform===`win32`&&jf()?";
+  "systemPermissions:process.platform===`darwin`||process.platform===`win32`&&js()?";
 const LINUX_SYSTEM_PERMISSIONS_GUARD =
-  "systemPermissions:process.platform===`darwin`||process.platform===`linux`||process.platform===`win32`&&jf()?";
+  "systemPermissions:process.platform===`darwin`||process.platform===`linux`||process.platform===`win32`&&js()?";
 
 function enableLinuxSystemPermissions(source) {
   const first = source.indexOf(SYSTEM_PERMISSIONS_GUARD);

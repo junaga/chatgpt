@@ -11,9 +11,9 @@ const { enableLinuxDictation } = require("../desktop/linux-runtime/dictation.cjs
 
 const boundaries = [
   "function W7(){return process.platform===`darwin`||process.platform===`win32`}",
-  "function nN(e,t,n){if(BM(e))",
-  "function SN(e,t){return t===`darwin`?gN(e).length>0:vN(e,t)!=null}",
-  "case`haiku`:case`linux`:case`netbsd`:case`openbsd`:case`sunos`:throw Error(`Global dictation hotkey release watching is not supported.`)}}function gN",
+  "function uN(e,t,n){if(JM(e))",
+  "function AN(e,t){return t===`darwin`?wN(e).length>0:EN(e,t)!=null}",
+  "case`aix`:case`android`:case`cygwin`:case`freebsd`:case`haiku`:case`linux`:case`netbsd`:case`openbsd`:case`sunos`:throw Error(`Global dictation hotkey release watching is not supported.`)}}function wN",
   "case`haiku`:case`linux`:case`netbsd`:case`openbsd`:case`sunos`:throw Error(`Global dictation paste is not supported on this OS.`)}}var B7",
 ];
 
@@ -25,7 +25,7 @@ test("the pinned bundle receives native Wayland and X11 dictation boundaries", (
   assert.match(patched, /`wait-hotkey-release`,e/);
   assert.match(patched, /`paste`/);
   assert.match(patched, /linux-input\.mjs/);
-  assert.match(patched, /t===`linux`\?sN\(e\)\.length>0/);
+  assert.match(patched, /t===`linux`\?hN\(e\)\.length>0/);
   assert.throws(() => enableLinuxDictation("missing"), /exactly one/);
 });
 

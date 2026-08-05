@@ -21,7 +21,7 @@ function composeLinuxMainBundle(source) {
 
 function installLinuxMainBundlePatches(vendorAppRoot) {
   const buildRoot = path.join(vendorAppRoot, ".vite", "build");
-  const mainBundles = fs.readdirSync(buildRoot).filter(filename => /^main--.+\.js$/.test(filename));
+  const mainBundles = fs.readdirSync(buildRoot).filter(filename => /^main-.+\.js$/.test(filename));
   if (mainBundles.length !== 1) {
     throw new Error(`Expected one upstream main bundle, found ${mainBundles.length}`);
   }

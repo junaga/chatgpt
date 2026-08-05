@@ -84,7 +84,7 @@ function prepareChromeNativeHost(options = {}) {
 
 function patchChromeInstallManifestSource(source) {
   const replacements = [
-    ["extensionHostPath:f(t)", `extensionHostPath:process.env.${NATIVE_HOST_OVERRIDE}||f(t)`],
+    ["extensionHostPath:_(t)", `extensionHostPath:process.env.${NATIVE_HOST_OVERRIDE}||_(t)`],
     ["xdgConfigHome:w.env.XDG_CONFIG_HOME", `xdgConfigHome:process.env.${NATIVE_HOST_CONFIG_HOME_OVERRIDE}||w.env.XDG_CONFIG_HOME`],
   ];
   let patched = source;
@@ -101,8 +101,8 @@ function patchChromeInstallManifestSource(source) {
 function enableLinuxChromeNativeHostLifecycle(source) {
   const replacements = [
     [
-      "r=await kq({pluginRoot:e.pluginRoot,target:n})",
-      `r=process.env.${NATIVE_HOST_OVERRIDE}||await kq({pluginRoot:e.pluginRoot,target:n})`,
+      "r=await Hq({pluginRoot:e.pluginRoot,target:n})",
+      `r=process.env.${NATIVE_HOST_OVERRIDE}||await Hq({pluginRoot:e.pluginRoot,target:n})`,
     ],
     [
       "defaultConfigHome:(0,i.join)(r.default.homedir(),`.config`),xdgConfigHome:process.env.XDG_CONFIG_HOME}).map",

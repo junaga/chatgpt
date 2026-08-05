@@ -14,10 +14,10 @@ test("Flatpak exposes host-visible Chrome wrapper and manifest locations", () =>
   assert.match(wrapper, /io\.github\.junaga\.chatgpt/);
   assert.match(wrapper, /\/app\/lib\/io\.github\.junaga\.chatgpt\/resources\/linux-runtime\/chrome-extension-host\.mjs/);
 
-  const source = "before xdgConfigHome:w.env.XDG_CONFIG_HOME extensionHostPath:f(t) after";
+  const source = "before xdgConfigHome:w.env.XDG_CONFIG_HOME extensionHostPath:_(t) after";
   assert.equal(
     patchChromeInstallManifestSource(source),
-    "before xdgConfigHome:process.env.CHATGPT_LINUX_NATIVE_HOST_CONFIG_HOME||w.env.XDG_CONFIG_HOME extensionHostPath:process.env.CHATGPT_LINUX_NATIVE_HOST_WRAPPER||f(t) after",
+    "before xdgConfigHome:process.env.CHATGPT_LINUX_NATIVE_HOST_CONFIG_HOME||w.env.XDG_CONFIG_HOME extensionHostPath:process.env.CHATGPT_LINUX_NATIVE_HOST_WRAPPER||_(t) after",
   );
   assert.throws(() => patchChromeInstallManifestSource("no matching expression"), /found 0/);
 });
@@ -36,7 +36,7 @@ test("native packages, AppImage, and Snap launch through their current resources
 
 test("the desktop lifecycle points every package format at the host-visible wrapper", () => {
   const source = [
-    "r=await kq({pluginRoot:e.pluginRoot,target:n})",
+    "r=await Hq({pluginRoot:e.pluginRoot,target:n})",
     "defaultConfigHome:(0,i.join)(r.default.homedir(),`.config`),xdgConfigHome:process.env.XDG_CONFIG_HOME}).map",
   ].join(" separator ");
   const patched = enableLinuxChromeNativeHostLifecycle(source);

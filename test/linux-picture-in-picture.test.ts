@@ -183,28 +183,29 @@ test("only completed node_repl Computer Use calls with screenshots become PiP pr
 });
 
 test("the pinned Sky contract is opened only for Linux and remains assertion checked", () => {
-  const loader = "function xo({electronAppPath:e,resourcesPath:t}){let n=";
-  const guards = Array.from({ length: 18 }, () => "if(r!==`darwin`)return!1;").join("");
-  const wrappers = `function Ho({addon:e,controlTooltips:t,${guards}return{contentBounds:t.getContentBounds(),id:e,nativeWindowHandle:typeof t.getNativeWindowHandle==\`function\`?t.getNativeWindowHandle():null}}function filler(){}var os=n.fl({`;
-  const manager = "ae=Cm({isEnabled:ie,isMacOS:j,nativeIntl:";
-  const subscription = "P.add(ls({appServerConnection:je(),isEnabled:ie})),P.add(Xne({appServerConnection:je(),closeActiveTurn:Be.closeActiveTurn}));";
+  const loader = "function go({electronAppPath:e,resourcesPath:t}){let n=";
+  const guards = Array.from({ length: 19 }, () => "if(r!==`darwin`)return!1;").join("");
+  const wrappers = `function Lo({addon:e,controlTooltips:t,${guards}return{contentBounds:t.getContentBounds(),id:e,nativeWindowHandle:typeof t.getNativeWindowHandle==\`function\`?t.getNativeWindowHandle():null}}function filler(){}var ns=n.nl({`;
+  const manager = "isEnabled:oe,isMacOS:M,nativeIntl:";
+  const subscription = "F.add(as({appServerConnection:Ae(),isEnabled:oe})),F.add(wre({appServerConnection:Ae(),closeActiveTurn:ze.closeActiveTurn}));";
   const patched = pictureInPicture.enableLinuxPictureInPicture(`${loader}${wrappers}${manager}${subscription}`);
 
   assert.match(patched, /linux-runtime.*picture-in-picture\.cjs/);
   assert.match(patched, /r!==`darwin`&&r!==`linux`/);
   assert.match(patched, /browserWindowId:t\.id/);
-  assert.match(patched, /isMacOS:j\|\|process\.platform===`linux`/);
+  assert.match(patched, /isMacOS:M\|\|process\.platform===`linux`/);
   assert.match(patched, /subscribeComputerUsePIPMetadata/);
   assert.throws(
     () => pictureInPicture.enableLinuxPictureInPicture(`${loader}${wrappers.replace(guards, guards.slice(0, -"if(r!==`darwin`)return!1;".length))}${manager}${subscription}`),
-    /Expected 18/,
+    /Expected 19/,
   );
   assert.throws(() => pictureInPicture.enableLinuxPictureInPicture("missing"), /exactly one/);
 });
 
-test("the Linux provider exports the complete 18-method upstream native surface", () => {
+test("the Linux provider exports the complete 19-method upstream native surface", () => {
   const methods = [
     "startRemoteHostedPIPContentHost",
+    "connectRemoteHostedPIPContentHost",
     "stopRemoteHostedPIPContentHost",
     "setRemoteHostedPIPContentActiveThreadID",
     "setRemoteHostedPIPContentSuppressedThreadIDs",

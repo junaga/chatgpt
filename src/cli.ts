@@ -22,7 +22,7 @@ type PackageFormat = NativeFormat | UniversalFormat;
 
 interface Options {
   command: "inspect" | "build";
-  dmg: string;
+  archive: string;
   output: string;
   work: string;
   keepWork: boolean;
@@ -35,21 +35,21 @@ interface VendorRelease {
 }
 
 function usage(): never {
-  console.error("Usage: npm run port -- <inspect|build> --dmg <ChatGPT.dmg> [--formats deb,rpm,archlinux,tar.gz,AppImage,snap,flatpak] [--output <dir>] [--work <dir>] [--keep-work]");
+  console.error("Usage: npm run port -- <inspect|build> --archive <ChatGPT.zip> [--formats deb,rpm,archlinux,tar.gz,AppImage,snap,flatpak] [--output <dir>] [--work <dir>] [--keep-work]");
   process.exit(2);
 }
 
 function parseArguments(arguments_: string[]): Options {
   const command = arguments_.shift();
   if (command !== "inspect" && command !== "build") usage();
-  let dmg = "";
+  let archive = "";
   let output = path.join(repository, "dist");
   let work = path.join(repository, ".work");
   let keepWork = false;
   let formats: Options["formats"] = ["deb", "rpm", "archlinux", "tar.gz", ...universalFormats];
   while (arguments_.length) {
     const argument = arguments_.shift();
-    if (argument === "--dmg") dmg = arguments_.shift() || "";
+    if (argument === "--archive" || argument === "--dmg") archive = arguments_.shift() || "";
     else if (argument === "--output") output = path.resolve(arguments_.shift() || usage());
     else if (argument === "--work") work = path.resolve(arguments_.shift() || usage());
     else if (argument === "--keep-work") keepWork = true;
@@ -61,8 +61,8 @@ function parseArguments(arguments_: string[]): Options {
     }
     else usage();
   }
-  if (!dmg) usage();
-  return { command, dmg: path.resolve(dmg), output, work, keepWork, formats };
+  if (!archive) usage();
+  return { command, archive: path.resolve(archive), output, work, keepWork, formats };
 }
 
 interface RunOptions {
@@ -124,10 +124,10 @@ async function validateExtractedApp(app: string, upstream: UpstreamRelease): Pro
   return { version: packageJson.version, build: packageJson.codexBuildNumber };
 }
 
-async function extract(dmg: string, root: string, upstream: UpstreamRelease): Promise<{ app: string; release: VendorRelease }> {
-  const extracted = path.join(root, "dmg");
+async function extract(archive: string, root: string, upstream: UpstreamRelease): Promise<{ app: string; release: VendorRelease }> {
+  const extracted = path.join(root, "upstream");
   await mkdir(extracted, { recursive: true });
-  const extraction = await run("7z", ["x", dmg, `-o${extracted}`, "-y"], {
+  const extraction = await run("7z", ["x", archive, `-o${extracted}`, "-y"], {
     capture: true,
     allowedExitCodes: [0, 2],
   });
@@ -137,11 +137,11 @@ async function extract(dmg: string, root: string, upstream: UpstreamRelease): Pr
     const expected = new Set(upstream.acceptedExtractionWarnings.map(link => `${upstream.appPath}/${link}`));
     const actual = new Set<string>();
     for (const error of errors) {
-      const match = error.match(/^ERROR: Dangerous link path was ignored : (.+?) : /);
-      if (!match || !expected.has(match[1])) throw new Error(`Unexpected DMG extraction error: ${error}`);
+      const match = error.match(/^ERROR: Dangerous link(?: path| via another link) was ignored : (.+?) : /);
+      if (!match || !expected.has(match[1])) throw new Error(`Unexpected upstream extraction error: ${error}`);
       actual.add(match[1]);
     }
-    if (actual.size !== expected.size) throw new Error("DMG extraction did not report the expected skipped symlinks");
+    if (actual.size !== expected.size) throw new Error("Upstream extraction did not report the expected skipped symlinks");
   }
   const resources = path.join(app, "Contents", "Resources");
   await requireFile(path.join(resources, "app.asar"), "Electron ASAR");
@@ -486,14 +486,14 @@ async function packageFormats(packageRoot: string, output: string, formats: Opti
 
 async function main(): Promise<void> {
   const options = parseArguments(process.argv.slice(2));
-  await requireFile(options.dmg, "DMG");
-  console.log("Hashing DMG…");
-  const checksum = await sha256(options.dmg);
+  await requireFile(options.archive, "Upstream archive");
+  console.log("Hashing upstream archive…");
+  const checksum = await sha256(options.archive);
   const upstream = await loadUpstream(upstreamFile);
-  if (checksum !== upstream.dmgSha256) {
-    throw new Error(`Unsupported DMG SHA-256: ${checksum}\nExpected: ${upstream.dmgSha256}`);
+  if (checksum !== upstream.archiveSha256) {
+    throw new Error(`Unsupported upstream archive SHA-256: ${checksum}\nExpected: ${upstream.archiveSha256}`);
   }
-  console.log(`DMG matches this checkout: ${checksum}`);
+  console.log(`Upstream archive matches this checkout: ${checksum}`);
   if (options.command === "inspect") return;
   if (process.platform !== "linux" || process.arch !== "x64") throw new Error("Building currently requires Linux x86-64");
 
@@ -509,7 +509,7 @@ async function main(): Promise<void> {
   const interrupt = () => void stop(130); const terminate = () => void stop(143);
   process.once("SIGINT", interrupt); process.once("SIGTERM", terminate);
   try {
-    const { app, release } = await extract(options.dmg, workRoot, upstream);
+    const { app, release } = await extract(options.archive, workRoot, upstream);
     console.log(`Upstream release: ${release.version} (build ${release.build}, port revision ${upstream.portRevision})`);
     await rebuildNativeModules(app, upstream, electron);
     const packageRoot = path.join(workRoot, "package-root");
@@ -521,7 +521,7 @@ async function main(): Promise<void> {
       upstreamVersion: release.version,
       buildNumber: release.build,
       portRevision: upstream.portRevision,
-      dmgSha256: checksum,
+      archiveSha256: checksum,
       artifacts: await Promise.all(artifacts.map(async artifact => ({
         file: path.basename(artifact),
         sha256: await sha256(artifact),

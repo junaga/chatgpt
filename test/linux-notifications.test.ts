@@ -134,11 +134,11 @@ test("GNOME permission-store replies map safely and other desktops remain unknow
 });
 
 test("the upstream notification service patch is narrow and assertion checked", () => {
-  const guard = "systemPermissions:process.platform===`darwin`||process.platform===`win32`&&jf()?";
+  const guard = "systemPermissions:process.platform===`darwin`||process.platform===`win32`&&js()?";
   const patched = notifications.enableLinuxSystemPermissions(`before ${guard} after`);
   assert.equal(
     patched,
-    "before systemPermissions:process.platform===`darwin`||process.platform===`linux`||process.platform===`win32`&&jf()? after",
+    "before systemPermissions:process.platform===`darwin`||process.platform===`linux`||process.platform===`win32`&&js()? after",
   );
   assert.throws(() => notifications.enableLinuxSystemPermissions("no guard"), /exactly one/);
   assert.throws(() => notifications.enableLinuxSystemPermissions(`${guard}${guard}`), /exactly one/);

@@ -44,4 +44,4 @@ COPY desktop/runtime/package.json desktop/runtime/package-lock.json ./desktop/ru
 COPY packaging ./packaging
 RUN npm ci
 
-ENTRYPOINT ["npm", "run", "port", "--", "build", "--dmg", "/input/ChatGPT.dmg", "--output", "/output", "--work", "/work"]
+ENTRYPOINT ["npm", "run", "port", "--", "build", "--archive", "/input/ChatGPT.zip", "--output", "/output", "--work", "/work"]

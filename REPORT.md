@@ -1,7 +1,7 @@
 # Port report
 
-This checkout ports ChatGPT `26.727.40816` (build `6067`) from the exact DMG
-recorded in `upstream.json`. It is an independent project, not an OpenAI
+This checkout ports ChatGPT `26.730.61639` (build `6234`) from the exact upstream
+archive recorded in `upstream.json`. It is an independent project, not an OpenAI
 release.
 
 ## What is ported
@@ -21,7 +21,7 @@ kept. The build replaces only their macOS boundaries:
   Linux Secret Service/KWallet storage.
 - Dictation supports X11 input and the Wayland Global Shortcuts and Remote
   Desktop portals. The system-wide shortcut depends on compositor support.
-- The complete 18-method Picture-in-Picture contract is implemented with an
+- The complete 19-method Picture-in-Picture contract is implemented with an
   always-on-top Electron surface for Browser Use and Computer Use previews.
 - Wayland sessions explicitly select Electron's native Wayland backend instead
   of relying on Chromium's automatic X11/Wayland choice.
@@ -89,16 +89,44 @@ features rather than portable desktop APIs.
 
 One staged application tree feeds nFPM for Debian, RPM, and Arch packages,
 electron-builder for AppImage, Snap, and Flatpak, and the generic tarball used
-by the NixOS and Gentoo recipes. The release contains nine short artifact names
-listed in the README.
+by the NixOS and Gentoo recipes. Releases use the ten short artifact names listed
+in the README, including the build/checksum manifest.
+
+## Codebase summary
+
+The maintained port is about 11,750 physical lines, excluding documentation,
+lockfiles, the extracted upstream app, dependencies, and build artifacts:
+
+- 855 lines of TypeScript extract and pin upstream, rebuild native modules, and
+  create the shared payload and packages.
+- 3,137 lines of JavaScript provide the Linux Electron boundaries, Browser host,
+  Picture-in-Picture, notifications, dictation, remote control, and launch path.
+- 4,849 lines of Rust implement AT-SPI desktop access, XDG portal control,
+  coordinates, screenshots, input, and the small bridge protocols.
+- 490 lines form the Linux Computer Use plugin overlay and model-facing client.
+- 1,888 lines are focused TypeScript and installed-app smoke tests.
+- 535 lines describe package formats, containers, recipes, and release metadata.
+
+## New upstream releases
+
+OpenAI's [official appcast](https://persistent.oaistatic.com/codex-app-prod/appcast.xml)
+is checked for a newer macOS archive. Its SHA-256, app path,
+version, build number, native-module list, and narrowly accepted extraction
+warnings are pinned in `upstream.json`. Assertion-checked bundle patches make the
+build stop when upstream moves a boundary, as this release did; each changed
+boundary is reviewed and its focused test is updated. A clean container then
+rebuilds the native modules, runs the checks, and produces every package from
+one payload. The release tag is `upstream-VERSION-port.REVISION`; a new upstream
+version starts at port revision 1.
 
 ## Verification and limits
 
-The repository has unit and static tests for every Linux boundary, protocol,
-patch assertion, and package recipe. Release builds also verify package
-metadata and checksums. No desktop integration tests were added.
+The repository has focused unit and static tests for Linux boundaries,
+protocols, patch assertions, and package recipes, plus a small installed-app
+smoke suite. Release builds verify package metadata and checksums. It does not
+attempt a large compositor/browser end-to-end matrix.
 
-This revision is x86-64 only and tied to one upstream DMG. The model-facing
+This revision is x86-64 only and tied to one upstream archive. The model-facing
 Browser Use tool schemas and Computer Use `sky` API match upstream, but the
 Linux browser coordinator and desktop backends are compatible
 reimplementations rather than Apple's native services. Screenshot framing,

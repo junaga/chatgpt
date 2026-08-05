@@ -16,14 +16,14 @@ const LINUX_PLUGIN_AVAILABILITY =
   "isAvailable:({features:e,platform:t})=>(t===`win32`||t===`linux`)&&e.computerUse";
 
 const SKILL_VARIANT =
-  "function ou(e){if(!(e.platform!==`darwin`||!e.marketplacePluginNames.includes(`computer-use`)))return e.desktopFeatureAvailability.computerUseNodeRepl?`node-repl`:`legacy-mcp`}";
+  "function Au(e){if(!(e.platform!==`darwin`||!e.marketplacePluginNames.includes(`computer-use`)))return e.desktopFeatureAvailability.computerUseNodeRepl?`node-repl`:`legacy-mcp`}";
 const LINUX_SKILL_VARIANT =
-  "function ou(e){if(!((e.platform!==`darwin`&&e.platform!==`linux`)||!e.marketplacePluginNames.includes(`computer-use`)))return e.desktopFeatureAvailability.computerUseNodeRepl?`node-repl`:`legacy-mcp`}";
+  "function Au(e){if(!((e.platform!==`darwin`&&e.platform!==`linux`)||!e.marketplacePluginNames.includes(`computer-use`)))return e.desktopFeatureAvailability.computerUseNodeRepl?`node-repl`:`legacy-mcp`}";
 
 const TRUSTED_CLIENTS =
-  "kr=[`028a14b6eaa6d98dac2aae00764345ab9f244801ed8493d42b9af3be5575006e`,`8785b5437d98636c3002d3d7e64b98db79c3b66870b1bd3d18dea953a99b1562`]";
+  "Or=[`091a81603ff202a16ed56557709bf42d97caf8f0dd2e07ae9e26d7c014d71035`]";
 const LINUX_TRUSTED_CLIENTS =
-  `kr=[\`028a14b6eaa6d98dac2aae00764345ab9f244801ed8493d42b9af3be5575006e\`,\`8785b5437d98636c3002d3d7e64b98db79c3b66870b1bd3d18dea953a99b1562\`,\`${LINUX_CLIENT_SHA256}\`]`;
+  `Or=[\`091a81603ff202a16ed56557709bf42d97caf8f0dd2e07ae9e26d7c014d71035\`,\`${LINUX_CLIENT_SHA256}\`]`;
 
 const TRUST_SELECTION =
   "let T=g||_&&(y.platform===`darwin`||w)?h:[]";
@@ -31,9 +31,9 @@ const LINUX_TRUST_SELECTION =
   "let T=g||_&&(y.platform===`darwin`||y.platform===`linux`||w)?h:[]";
 
 const COMPUTER_USE_INSTRUCTIONS =
-  "...r&&l.platform===`darwin`?{[ti]:Zee}:{}";
+  "...r&&l.platform===`darwin`?{[ti]:ite}:{}";
 const LINUX_COMPUTER_USE_INSTRUCTIONS =
-  "...r&&(l.platform===`darwin`||l.platform===`linux`)?{[ti]:l.platform===`linux`?`Control desktop apps on Linux through Computer Use.`:Zee}:{}";
+  "...r&&(l.platform===`darwin`||l.platform===`linux`)?{[ti]:l.platform===`linux`?`Control desktop apps on Linux through Computer Use.`:ite}:{}";
 
 function replaceExactlyOnce(source, before, after, label) {
   const first = source.indexOf(before);

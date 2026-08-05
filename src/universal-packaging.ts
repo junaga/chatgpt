@@ -150,11 +150,14 @@ export function universalPackageConfiguration(options: UniversalPackageOptions):
 
 export async function packageUniversalFormat(options: UniversalPackageOptions): Promise<string> {
   const filename = options.format === "AppImage" ? "chatgpt.AppImage" : `chatgpt.${options.format}`;
+  const expected = path.join(options.output, filename);
+  // flatpak build-bundle refuses to replace an existing destination. Release
+  // rebuilds should behave the same whether dist is empty or already populated.
+  await rm(expected, { force: true });
   const artifacts = await buildUniversalTarget(options);
   // The port deliberately has no in-app updater. Do not leave update-channel
   // metadata beside the standalone downloads.
   await rm(path.join(options.output, "latest-linux.yml"), { force: true });
-  const expected = path.join(options.output, filename);
   if (!artifacts.includes(expected)) {
     throw new Error(`electron-builder did not produce ${filename}`);
   }

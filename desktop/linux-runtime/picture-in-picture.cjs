@@ -3,22 +3,22 @@ const DEFAULT_MAX_DISPLAY_SIZE = 420;
 const MAX_IMAGE_URL_BYTES = 64 * 1024 * 1024;
 
 const SKY_ADDON_LOADER_BOUNDARY =
-  "function xo({electronAppPath:e,resourcesPath:t}){let n=";
+  "function go({electronAppPath:e,resourcesPath:t}){let n=";
 const SKY_ADDON_LOADER_LINUX =
-  "function xo({electronAppPath:e,resourcesPath:t}){if(process.platform===`linux`){if(t==null)throw Error(`Linux Picture-in-Picture requires resourcesPath`);return bo(p.default.join(t,`linux-runtime`,`picture-in-picture.cjs`))}let n=";
-const PIP_WRAPPER_START = "function Ho({addon:e,controlTooltips:t,";
-const PIP_WRAPPER_END = "var os=n.fl({";
+  "function go({electronAppPath:e,resourcesPath:t}){if(process.platform===`linux`){if(t==null)throw Error(`Linux Picture-in-Picture requires resourcesPath`);return ho(p.default.join(t,`linux-runtime`,`picture-in-picture.cjs`))}let n=";
+const PIP_WRAPPER_START = "function Lo({addon:e,controlTooltips:t,";
+const PIP_WRAPPER_END = "var ns=n.nl({";
 const PIP_HOST_WINDOW_BOUNDARY =
   "contentBounds:t.getContentBounds(),id:e,nativeWindowHandle:typeof t.getNativeWindowHandle==`function`?t.getNativeWindowHandle():null";
 const PIP_HOST_WINDOW_LINUX =
   "browserWindowId:t.id,contentBounds:t.getContentBounds(),id:e,nativeWindowHandle:typeof t.getNativeWindowHandle==`function`?t.getNativeWindowHandle():null";
-const PIP_MANAGER_BOUNDARY = "ae=Cm({isEnabled:ie,isMacOS:j,nativeIntl:";
+const PIP_MANAGER_BOUNDARY = "isEnabled:oe,isMacOS:M,nativeIntl:";
 const PIP_MANAGER_LINUX =
-  "ae=Cm({isEnabled:ie,isMacOS:j||process.platform===`linux`,nativeIntl:";
+  "isEnabled:oe,isMacOS:M||process.platform===`linux`,nativeIntl:";
 const PIP_SUBSCRIPTION_BOUNDARY =
-  "P.add(ls({appServerConnection:je(),isEnabled:ie})),P.add(Xne({appServerConnection:je(),closeActiveTurn:Be.closeActiveTurn}));";
+  "F.add(as({appServerConnection:Ae(),isEnabled:oe})),F.add(wre({appServerConnection:Ae(),closeActiveTurn:ze.closeActiveTurn}));";
 const PIP_SUBSCRIPTION_LINUX =
-  "P.add(ls({appServerConnection:je(),isEnabled:ie})),process.platform===`linux`&&P.add(require(p.default.join(process.resourcesPath,`linux-runtime`,`picture-in-picture.cjs`)).subscribeComputerUsePIPMetadata(je())),P.add(Xne({appServerConnection:je(),closeActiveTurn:Be.closeActiveTurn}));";
+  "F.add(as({appServerConnection:Ae(),isEnabled:oe})),process.platform===`linux`&&F.add(require(p.default.join(process.resourcesPath,`linux-runtime`,`picture-in-picture.cjs`)).subscribeComputerUsePIPMetadata(Ae())),F.add(wre({appServerConnection:Ae(),closeActiveTurn:ze.closeActiveTurn}));";
 
 function replaceExactlyOnce(source, before, after, label) {
   const first = source.indexOf(before);
@@ -47,8 +47,8 @@ function enableLinuxPictureInPicture(source) {
     guardCount += 1;
     return `${platform}!==\`darwin\`&&${platform}!==\`linux\``;
   });
-  if (guardCount !== 18) {
-    throw new Error(`Expected 18 upstream Picture-in-Picture platform guards, found ${guardCount}`);
+  if (guardCount !== 19) {
+    throw new Error(`Expected 19 upstream Picture-in-Picture platform guards, found ${guardCount}`);
   }
   patched = `${patched.slice(0, start)}${linuxBlock}${patched.slice(end)}`;
   patched = replaceExactlyOnce(
@@ -120,6 +120,7 @@ function createPictureInPictureHost({
     cursorHandler: null,
     cursorIsActive: false,
     hostRegistrations: new Map(),
+    hostProcessIdentifier: null,
     maxDisplaySize: DEFAULT_MAX_DISPLAY_SIZE,
     maxDisplaySizeChangedHandler: null,
     petWakeRequestHandler: null,
@@ -326,6 +327,14 @@ function createPictureInPictureHost({
       };
       state.started = true;
       reconcile();
+      return true;
+    },
+
+    connectRemoteHostedPIPContentHost(processIdentifier) {
+      if (!Number.isSafeInteger(processIdentifier) || processIdentifier <= 0) return false;
+      // macOS connects its out-of-process Sky service here. Linux hosts PiP in
+      // this Electron process, so the equivalent connection is already live.
+      state.hostProcessIdentifier = processIdentifier;
       return true;
     },
 
@@ -544,6 +553,7 @@ function subscribeComputerUsePIPMetadata(appServerConnection) {
 
 const nativeMethods = [
   "startRemoteHostedPIPContentHost",
+  "connectRemoteHostedPIPContentHost",
   "stopRemoteHostedPIPContentHost",
   "setRemoteHostedPIPContentActiveThreadID",
   "setRemoteHostedPIPContentSuppressedThreadIDs",

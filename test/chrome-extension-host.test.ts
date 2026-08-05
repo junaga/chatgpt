@@ -133,14 +133,14 @@ test("side-panel version fields match the upstream Chrome plugin lifecycle contr
     await writeFile(browserClientPath, "export {};\n");
     await writeFile(path.join(root, ".codex-plugin", "plugin.json"), JSON.stringify({
       name: "chrome",
-      version: "26.727.40816",
+      version: "26.730.61639",
     }));
     const version = await loadChromePluginVersion({ browserClientPath });
-    assert.equal(version, "26.727.40816");
+    assert.equal(version, "26.730.61639");
     assert.deepEqual(sidePanelVersionFields(version), {
-      appVersion: "26.727.40816",
-      cliVersion: "26.727.40816",
-      nativeHostVersion: "26.727.40816",
+      appVersion: "26.730.61639",
+      cliVersion: "26.730.61639",
+      nativeHostVersion: "26.730.61639",
     });
   } finally {
     await rm(root, { recursive: true, force: true });

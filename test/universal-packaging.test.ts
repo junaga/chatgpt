@@ -17,7 +17,7 @@ test("one electron-builder configuration describes every universal Linux package
       output: "/work/dist",
       prepackaged: "/work/app",
       project: "/work/project",
-      version: "26.727.40816",
+      version: "26.730.61639",
     });
     assert.deepEqual(config.linux?.target, [format]);
     assert.equal(config.linux?.artifactName, "chatgpt.${ext}");
@@ -35,7 +35,7 @@ test("sandboxed package settings retain desktop-control and notification portals
     output: "/work/dist",
     prepackaged: "/work/app",
     project: "/work/project",
-    version: "26.727.40816",
+    version: "26.730.61639",
   });
   assert.equal(config.snap?.confinement, "classic");
   assert.equal(config.snap?.allowNativeWayland, true);

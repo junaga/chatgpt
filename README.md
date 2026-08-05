@@ -16,29 +16,28 @@ APT shows the package as:
 
 > Package: chatgpt
 >
-> Version: 26.727.40816-7
+> Version: 26.730.61639-1
 >
 > Architecture: amd64
 >
 > Description: Experimental ChatGPT Codex desktop compatibility port for Linux.
 
-## Downloads
+## Other downloads
 
-- Debian/Ubuntu — `chatgpt.deb`
-- Fedora/RHEL/openSUSE — `chatgpt.rpm`
-- Arch Linux — `chatgpt.pkg.tar.zst`
-- AppImage — `chatgpt.AppImage`
-- Snap — `chatgpt.snap`
-- Flatpak — `chatgpt.flatpak`
-- Generic Linux — `chatgpt.tar.gz`
-- NixOS recipe — `chatgpt.nix`
-- Gentoo recipe — `chatgpt.ebuild`
+- `chatgpt.rpm` — Fedora, RHEL, openSUSE
+- `chatgpt.pkg.tar.zst` — Arch Linux
+- `chatgpt.AppImage` — AppImage
+- `chatgpt.snap` — Snap
+- `chatgpt.flatpak` — Flatpak
+- `chatgpt.tar.gz` — generic Linux
+- `chatgpt.nix` — NixOS recipe
+- `chatgpt.ebuild` — Gentoo recipe
+- `chatgpt.build.json` — versions and checksums
 
-The app includes its Codex runtime. Browser Use, Computer Use, remote control,
-notifications, and dictation have Linux implementations. Wayland desktop access
-uses your compositor's portals; global shortcuts depend on compositor support.
-The macOS in-app updater is intentionally disabled—install a newer package to
-update.
+Browser Use, Computer Use, remote control, notifications, dictation, and
+Picture-in-Picture are supported. Wayland runs natively and asks for desktop
+access only when a feature needs it. Global shortcuts depend on compositor
+support.
 
-See [the port report](REPORT.md) for details. Build with `npm run port:container`
-and run the small unit/static checks with `npm test`.
+Install a newer package to update. See [the port report](REPORT.md) for technical
+details and known limitations.
