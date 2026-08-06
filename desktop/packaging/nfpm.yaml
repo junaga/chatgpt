@@ -12,7 +12,7 @@ description: |-
   Runs the upstream desktop renderer with Linux Electron, native modules,
   and the Codex CLI. This is an independent project, not an OpenAI product.
 vendor: ChatGPT Linux contributors
-homepage: https://github.com/junaga/chatgpt-linux
+homepage: https://github.com/junaga/chatgpt
 license: Proprietary upstream application; independent port tooling
 umask: 0o022
 contents:

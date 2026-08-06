@@ -7,7 +7,7 @@ An unofficial x86-64 Linux port of the ChatGPT Codex desktop app.
 Debian, Ubuntu, and related distributions:
 
 ```bash
-LINK=https://github.com/junaga/chatgpt-linux/releases/latest/download/chatgpt.deb
+LINK=https://github.com/junaga/chatgpt/releases/latest/download/chatgpt.deb
 curl -fL "$LINK" > chatgpt.deb
 sudo apt install ./chatgpt.deb
 ```

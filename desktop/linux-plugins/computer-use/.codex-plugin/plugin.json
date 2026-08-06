@@ -5,7 +5,7 @@
   "author": {
     "name": "OpenAI and ChatGPT Linux contributors"
   },
-  "homepage": "https://github.com/junaga/chatgpt-linux",
+  "homepage": "https://github.com/junaga/chatgpt",
   "license": "Proprietary upstream application; independent Linux adapter",
   "keywords": ["computer-use", "desktop-control", "linux", "accessibility", "at-spi"],
   "skills": "./skills/",
@@ -15,7 +15,7 @@
     "longDescription": "Computer Use combines AT-SPI app semantics with full-desktop screenshots and pointer/keyboard control. It uses the bundled Sky client on X11 and desktop portals on supported Wayland compositors.",
     "developerName": "OpenAI and ChatGPT Linux contributors",
     "category": "Productivity",
-    "websiteURL": "https://github.com/junaga/chatgpt-linux",
+    "websiteURL": "https://github.com/junaga/chatgpt",
     "logo": "./assets/app-icon.png",
     "defaultPrompt": ["Help me use an app on my desktop"],
     "brandColor": "#0F172A",

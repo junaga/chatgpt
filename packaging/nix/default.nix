@@ -6,7 +6,7 @@ let
     pname = "chatgpt-linux-payload";
     inherit version;
     src = pkgs.fetchurl {
-      url = "https://github.com/junaga/chatgpt-linux/releases/download/upstream-26.730.61639-port.1/chatgpt.tar.gz";
+      url = "https://github.com/junaga/chatgpt/releases/download/upstream-26.730.61639-port.1/chatgpt.tar.gz";
       hash = "sha256-ic35gdKCO9tVsplSoX44v7B6bCYHKMzO8Ck48hpfusk=";
     };
     sourceRoot = ".";
@@ -48,7 +48,7 @@ in pkgs.buildFHSEnv {
   runScript = "/usr/bin/chatgpt --disable-setuid-sandbox";
   meta = {
     description = "Experimental ChatGPT Codex desktop compatibility port";
-    homepage = "https://github.com/junaga/chatgpt-linux";
+    homepage = "https://github.com/junaga/chatgpt";
     license = pkgs.lib.licenses.unfree;
     platforms = [ "x86_64-linux" ];
     mainProgram = "chatgpt";
