@@ -22,7 +22,7 @@ const systemCodex =
   process.env.CODEX_DESKTOP_CODEX_PATH ||
   "";
 const packagedCodex = path.join(analysisRoot, "codex");
-const linuxCodex = fs.existsSync(packagedCodex) ? packagedCodex : systemCodex;
+const linuxCodex = systemCodex || (fs.existsSync(packagedCodex) ? packagedCodex : "");
 
 // Electron 41 normally selects Wayland automatically. Make the choice explicit
 // so mixed X11/Wayland environments never fall back to XWayland accidentally.

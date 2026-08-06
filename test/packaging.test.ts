@@ -36,6 +36,11 @@ test("the Linux launcher disables in-app updates", async () => {
   assert.match(launcher, /process\.env\.CODEX_SPARKLE_ENABLED = "false"/);
 });
 
+test("an explicit Codex CLI path overrides the packaged binary", async () => {
+  const launcher = await readFile(new URL("../desktop/launcher.cjs", import.meta.url), "utf8");
+  assert.match(launcher, /const linuxCodex = systemCodex \|\| \(fs\.existsSync\(packagedCodex\)/);
+});
+
 test("release artifacts use the short chatgpt basename", async () => {
   const cli = await readFile(new URL("../src/cli.ts", import.meta.url), "utf8");
   const dockerfile = await readFile(new URL("container/build.Dockerfile", import.meta.url), "utf8");

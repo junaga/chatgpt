@@ -110,6 +110,17 @@ async function requireFile(file: string, description: string): Promise<void> {
   }
 }
 
+async function validateRuntimeCodexPin(upstream: UpstreamRelease): Promise<void> {
+  const manifestFile = path.join(runtimeModules, "package.json");
+  const manifest = JSON.parse(await readFile(manifestFile, "utf8"));
+  const pinnedVersion = manifest.dependencies?.["@openai/codex"];
+  if (pinnedVersion !== upstream.codexVersion) {
+    throw new Error(
+      `Linux runtime pins @openai/codex ${String(pinnedVersion)}; expected upstream ${upstream.codexVersion}`,
+    );
+  }
+}
+
 async function validateExtractedApp(app: string, upstream: UpstreamRelease): Promise<VendorRelease> {
   const resources = path.join(app, "Contents", "Resources");
   const packageJson = JSON.parse(await readFile(path.join(resources, "app.asar.extracted", "package.json"), "utf8"));
@@ -118,6 +129,11 @@ async function validateExtractedApp(app: string, upstream: UpstreamRelease): Pro
   }
   for (const module of Object.keys(upstream.nativeArtifacts)) {
     await requireFile(path.join(resources, "app.asar.extracted", "node_modules", module, "package.json"), `Native module ${module}`);
+  }
+  const bundledCodex = path.join(resources, "codex");
+  await requireFile(bundledCodex, "Bundled Codex CLI");
+  if (!(await readFile(bundledCodex)).includes(Buffer.from(upstream.codexVersion))) {
+    throw new Error(`Bundled Codex CLI does not match expected version ${upstream.codexVersion}`);
   }
   await requireFile(path.join(resources, "plugins"), "Bundled plugins");
   await requireFile(path.join(resources, "icon-chatgpt.png"), "Application icon");
@@ -490,6 +506,7 @@ async function main(): Promise<void> {
   console.log("Hashing upstream archive…");
   const checksum = await sha256(options.archive);
   const upstream = await loadUpstream(upstreamFile);
+  await validateRuntimeCodexPin(upstream);
   if (checksum !== upstream.archiveSha256) {
     throw new Error(`Unsupported upstream archive SHA-256: ${checksum}\nExpected: ${upstream.archiveSha256}`);
   }
@@ -521,6 +538,7 @@ async function main(): Promise<void> {
       upstreamVersion: release.version,
       buildNumber: release.build,
       portRevision: upstream.portRevision,
+      codexVersion: upstream.codexVersion,
       archiveSha256: checksum,
       artifacts: await Promise.all(artifacts.map(async artifact => ({
         file: path.basename(artifact),

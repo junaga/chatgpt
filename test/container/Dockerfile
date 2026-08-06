@@ -1,6 +1,6 @@
 FROM node:22-bookworm-slim
 
-ARG CODEX_NPM_SPEC=@openai/codex@0.146.0
+ARG CODEX_NPM_SPEC=@openai/codex@0.147.0-alpha.1.2
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     dbus-x11 git libasound2 libatk-bridge2.0-0 libatk1.0-0 libcairo2 \
