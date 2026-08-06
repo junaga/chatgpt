@@ -9,6 +9,7 @@
   "scripts": {
     "port": "tsx src/cli.ts",
     "port:container": "./scripts/build-container.sh",
+    "release": "./scripts/release.sh",
     "test": "npm run typecheck && npm run test:tool",
     "test:tool": "tsx --test test/*.test.ts",
     "test:installed": "npm test --prefix desktop",

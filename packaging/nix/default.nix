@@ -6,7 +6,7 @@ let
     pname = "chatgpt-linux-payload";
     inherit version;
     src = pkgs.fetchurl {
-      url = "https://github.com/junaga/chatgpt/releases/download/upstream-26.730.61639-port.1/chatgpt.tar.gz";
+      url = "https://github.com/junaga/chatgpt/releases/download/upstream-26.730.61639-port.2/chatgpt.tar.gz";
       hash = "sha256-ic35gdKCO9tVsplSoX44v7B6bCYHKMzO8Ck48hpfusk=";
     };
     sourceRoot = ".";
