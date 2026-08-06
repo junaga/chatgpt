@@ -18,7 +18,9 @@ const PIP_MANAGER_LINUX =
 const PIP_SUBSCRIPTION_BOUNDARY =
   "F.add(as({appServerConnection:Ae(),isEnabled:oe})),F.add(wre({appServerConnection:Ae(),closeActiveTurn:ze.closeActiveTurn}));";
 const PIP_SUBSCRIPTION_LINUX =
-  "F.add(as({appServerConnection:Ae(),isEnabled:oe})),process.platform===`linux`&&F.add(require(p.default.join(process.resourcesPath,`linux-runtime`,`picture-in-picture.cjs`)).subscribeComputerUsePIPMetadata(Ae())),F.add(wre({appServerConnection:Ae(),closeActiveTurn:ze.closeActiveTurn}));";
+  "F.add(as({appServerConnection:Ae(),isEnabled:oe})),process.platform===`linux`&&F.add(require(p.default.join(process.resourcesPath,`linux-runtime`,`picture-in-picture.cjs`)).subscribeComputerUsePIPMetadata(Ae())),F.add(wre({appServerConnection:Ae(),closeActiveTurn:process.platform===`linux`?()=>{}:ze.closeActiveTurn}));";
+const PIP_PET_WAKE_BOUNDARY = "z.setPetWakeRequestHandler(()=>{";
+const PIP_PET_WAKE_LINUX = "process.platform!==`linux`&&z.setPetWakeRequestHandler(()=>{";
 
 function replaceExactlyOnce(source, before, after, label) {
   const first = source.indexOf(before);
@@ -62,6 +64,12 @@ function enableLinuxPictureInPicture(source) {
     PIP_MANAGER_BOUNDARY,
     PIP_MANAGER_LINUX,
     "Picture-in-Picture manager",
+  );
+  patched = replaceExactlyOnce(
+    patched,
+    PIP_PET_WAKE_BOUNDARY,
+    PIP_PET_WAKE_LINUX,
+    "Picture-in-Picture pet wake handler",
   );
   return replaceExactlyOnce(
     patched,

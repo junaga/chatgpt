@@ -186,18 +186,28 @@ test("the pinned Sky contract is opened only for Linux and remains assertion che
   const loader = "function go({electronAppPath:e,resourcesPath:t}){let n=";
   const guards = Array.from({ length: 19 }, () => "if(r!==`darwin`)return!1;").join("");
   const wrappers = `function Lo({addon:e,controlTooltips:t,${guards}return{contentBounds:t.getContentBounds(),id:e,nativeWindowHandle:typeof t.getNativeWindowHandle==\`function\`?t.getNativeWindowHandle():null}}function filler(){}var ns=n.nl({`;
-  const manager = "isEnabled:oe,isMacOS:M,nativeIntl:";
   const subscription = "F.add(as({appServerConnection:Ae(),isEnabled:oe})),F.add(wre({appServerConnection:Ae(),closeActiveTurn:ze.closeActiveTurn}));";
-  const patched = pictureInPicture.enableLinuxPictureInPicture(`${loader}${wrappers}${manager}${subscription}`);
+  const manager = "isEnabled:oe,isMacOS:M,nativeIntl:";
+  const petWake = "z.setPetWakeRequestHandler(()=>{";
+  const source = `${loader}${wrappers}${manager}${petWake}${subscription}`;
+  const patched = pictureInPicture.enableLinuxPictureInPicture(source);
 
   assert.match(patched, /linux-runtime.*picture-in-picture\.cjs/);
   assert.match(patched, /r!==`darwin`&&r!==`linux`/);
   assert.match(patched, /browserWindowId:t\.id/);
   assert.match(patched, /isMacOS:M\|\|process\.platform===`linux`/);
+  // Browser/Computer Use still use the manager, but Linux must not attach its
+  // PiP controls to the optional pet or use PiP cleanup to close Voice.
+  assert.match(patched, /process\.platform!==`linux`&&z\.setPetWakeRequestHandler/);
+  assert.match(patched, /closeActiveTurn:process\.platform===`linux`\?\(\)=>\{\}:ze\.closeActiveTurn/);
   assert.match(patched, /subscribeComputerUsePIPMetadata/);
   assert.throws(
-    () => pictureInPicture.enableLinuxPictureInPicture(`${loader}${wrappers.replace(guards, guards.slice(0, -"if(r!==`darwin`)return!1;".length))}${manager}${subscription}`),
+    () => pictureInPicture.enableLinuxPictureInPicture(`${loader}${wrappers.replace(guards, guards.slice(0, -"if(r!==`darwin`)return!1;".length))}${manager}${petWake}${subscription}`),
     /Expected 19/,
+  );
+  assert.throws(
+    () => pictureInPicture.enableLinuxPictureInPicture(`${loader}${wrappers}${manager}${subscription}`),
+    /pet wake handler/,
   );
   assert.throws(() => pictureInPicture.enableLinuxPictureInPicture("missing"), /exactly one/);
 });
