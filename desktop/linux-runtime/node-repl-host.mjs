@@ -7,6 +7,7 @@ import { createRequire } from "node:module";
 import net from "node:net";
 import path from "node:path";
 import process from "node:process";
+import os from "node:os";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 
@@ -294,7 +295,12 @@ async function responseBody(response) {
   return Buffer.concat(chunks, length);
 }
 
-async function imageContent(imageUrl) {
+function pathInside(root, candidate) {
+  const relative = path.relative(path.resolve(root), candidate);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+export async function imageContent(imageUrl, allowedFileRoots = []) {
   if (imageUrl.startsWith("data:")) {
     const match = imageUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/);
     if (!match) throw new Error("nodeRepl.emitImage returned an unsupported data URL");
@@ -302,7 +308,13 @@ async function imageContent(imageUrl) {
   }
   const url = new URL(imageUrl);
   if (url.protocol !== "file:") throw new Error("nodeRepl.emitImage only accepts data: and file: URLs");
-  const file = fileURLToPath(url);
+  const requestedFile = fileURLToPath(url);
+  let file;
+  try { file = await realpath(requestedFile); }
+  catch { throw new Error("nodeRepl.emitImage file does not exist"); }
+  if (!allowedFileRoots.some(root => pathInside(root, file))) {
+    throw new Error("nodeRepl.emitImage file is outside the sandbox-readable image roots");
+  }
   const extension = path.extname(file).toLowerCase();
   const mimeType = extension === ".jpg" || extension === ".jpeg" ? "image/jpeg" : extension === ".webp" ? "image/webp" : "image/png";
   return { type: "image", mimeType, data: (await readFile(file)).toString("base64"), _meta: { "codex/imageDetail": "original" } };
@@ -316,6 +328,7 @@ export class NodeReplRuntime {
     this.kernelPath = options.kernelPath || path.join(this.cuaRoot, "lib", "node_repl", "kernel.js");
     this.codexPath = options.codexPath || process.env.CHATGPT_LINUX_SYSTEM_CODEX || process.env.CODEX_CLI_PATH || "/usr/local/bin/codex";
     this.workingDirectory = options.workingDirectory || process.cwd();
+    this.allowedImageRoots = options.allowedImageRoots || [this.workingDirectory, this.cuaRoot, os.tmpdir()];
     this.spawnProcess = options.spawnProcess || spawn;
     this.fetchImpl = options.fetchImpl || fetch;
     this.clientRequest = options.clientRequest || (async () => { throw new Error("MCP client requests are unavailable"); });
@@ -465,7 +478,7 @@ export class NodeReplRuntime {
     if (message.type === "emit_image") {
       try {
         if (!pending) throw new Error("Image belongs to an unknown execution");
-        pending.content.push(await imageContent(message.image_url));
+        pending.content.push(await imageContent(message.image_url, this.allowedImageRoots));
         jsonLine(this.child.stdin, { type: "emit_image_result", id: message.id, ok: true });
       } catch (error) {
         jsonLine(this.child.stdin, { type: "emit_image_result", id: message.id, ok: false, error: errorText(error) });

@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 
 // @ts-expect-error Packaged runtime modules intentionally ship as plain JavaScript.
-import { allowedAuthenticatedFetchUrl, allowedNativePipe, chatgptAccountIdFromToken, kernelLaunch, NodeReplMcpServer, NODE_REPL_TOOLS, NodeReplRuntime, resolveCodexTomlPath } from "../desktop/linux-runtime/node-repl-host.mjs";
+import { allowedAuthenticatedFetchUrl, allowedNativePipe, chatgptAccountIdFromToken, imageContent, kernelLaunch, NodeReplMcpServer, NODE_REPL_TOOLS, NodeReplRuntime, resolveCodexTomlPath } from "../desktop/linux-runtime/node-repl-host.mjs";
 
 test("node_repl publishes the upstream three-tool contract", async () => {
   const calls: unknown[] = [];
@@ -40,6 +41,28 @@ test("native pipes are restricted to browser-use sockets", () => {
   assert.equal(allowedNativePipe("/run/user/1000/chatgpt-auth", "/run/user/1000/chatgpt-auth"), true);
   assert.equal(allowedNativePipe("/run/user/1000/ssh-agent"), false);
   assert.equal(allowedNativePipe(path.relative(process.cwd(), "/tmp/codex-browser-use")), false);
+});
+
+test("node_repl image files stay inside sandbox-readable roots", async () => {
+  const temporary = await mkdtemp("/tmp/node-repl-image-");
+  try {
+    const image = `${temporary}/preview.png`;
+    await writeFile(image, Buffer.from("png"));
+    const content = await imageContent(`file://${image}`, [temporary]);
+    assert.equal(content.type, "image");
+    await assert.rejects(
+      imageContent("file:///etc/hosts", [temporary]),
+      /outside the sandbox-readable image roots|does not exist/,
+    );
+    const escaped = `${temporary}/escaped.png`;
+    await symlink("/etc/hosts", escaped);
+    await assert.rejects(
+      imageContent(`file://${escaped}`, [temporary]),
+      /outside the sandbox-readable image roots/,
+    );
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
 });
 
 test("browser TOML paths cannot escape CODEX_HOME", () => {
