@@ -8,12 +8,15 @@ const { enableLinuxDictation } = require("./dictation.cjs");
 const { enableLinuxSystemPermissions } = require("./notifications.cjs");
 const { enableLinuxPictureInPicture } = require("./picture-in-picture.cjs");
 const { enableLinuxRemoteControlDeviceKeys } = require("./remote-control-device-key.cjs");
+const { enableNativeLinuxWindowBehavior } = require("./window-behavior.cjs");
 
 function composeLinuxMainBundle(source) {
-  return enableLinuxComputerUse(
-    enableLinuxDictation(
-      enableLinuxPictureInPicture(
-        enableLinuxRemoteControlDeviceKeys(enableLinuxSystemPermissions(source)),
+  return enableNativeLinuxWindowBehavior(
+    enableLinuxComputerUse(
+      enableLinuxDictation(
+        enableLinuxPictureInPicture(
+          enableLinuxRemoteControlDeviceKeys(enableLinuxSystemPermissions(source)),
+        ),
       ),
     ),
   );

@@ -19,7 +19,7 @@ test("revision 7 clears only the stale revision 6 pet wake state once", async t 
     "unrelated-setting": { keep: true },
   }));
 
-  assert.equal(migrateRevision6PetWake({ homeDirectory: home }), true);
+  assert.equal(migrateRevision6PetWake({ environment: {}, homeDirectory: home }), true);
   assert.deepEqual(JSON.parse(await readFile(stateFile, "utf8")), {
     "electron-avatar-overlay-open": false,
     "unrelated-setting": { keep: true },
@@ -27,7 +27,7 @@ test("revision 7 clears only the stale revision 6 pet wake state once", async t 
   assert.match(await readFile(path.join(codexHome, REVISION_7_MARKER), "utf8"), /revision 6/);
 
   await writeFile(stateFile, JSON.stringify({ "electron-avatar-overlay-open": true }));
-  assert.equal(migrateRevision6PetWake({ homeDirectory: home }), false);
+  assert.equal(migrateRevision6PetWake({ environment: {}, homeDirectory: home }), false);
   assert.equal(JSON.parse(await readFile(stateFile, "utf8"))["electron-avatar-overlay-open"], true);
 });
 
@@ -35,12 +35,13 @@ test("revision 7 leaves missing and malformed state untouched", async t => {
   const home = await mkdtemp(path.join(os.tmpdir(), "chatgpt-state-migration-"));
   t.after(async () => { await rm(home, { recursive: true }); });
   const warnings: unknown[] = [];
-  assert.equal(migrateRevision6PetWake({ homeDirectory: home }), false);
+  assert.equal(migrateRevision6PetWake({ environment: {}, homeDirectory: home }), false);
   const codexHome = path.join(home, ".codex");
   await mkdir(codexHome);
   const stateFile = path.join(codexHome, ".codex-global-state.json");
   await writeFile(stateFile, "not json");
   assert.equal(migrateRevision6PetWake({
+    environment: {},
     homeDirectory: home,
     logger: { warn: (...value: unknown[]) => warnings.push(value) },
   }), false);
