@@ -1,4 +1,4 @@
-const { app, dialog, Notification, shell } = require("electron");
+const { app, contentTracing, dialog, Notification, shell } = require("electron");
 const path = require("node:path");
 const os = require("node:os");
 const fs = require("node:fs");
@@ -13,6 +13,8 @@ const linuxRuntime = fs.existsSync(packagedVendorApp)
   ? path.join(__dirname, "..", "linux-runtime")
   : path.join(__dirname, "linux-runtime");
 const { installLinuxMainBundlePatches } = require(path.join(linuxRuntime, "main-bundle-patches.cjs"));
+const { installVoiceTimingInstrumentation } = require(path.join(linuxRuntime, "voice-timing.cjs"));
+const { installMediaTracing } = require(path.join(linuxRuntime, "media-trace.cjs"));
 const { installNotificationIntegration } = require(path.join(linuxRuntime, "notifications.cjs"));
 const { prepareChromeNativeHost } = require(path.join(linuxRuntime, "chrome-native-host.cjs"));
 const { migrateRevision6PetWake } = require(path.join(linuxRuntime, "state-migrations.cjs"));
@@ -27,6 +29,8 @@ const linuxCodex = systemCodex || (fs.existsSync(packagedCodex) ? packagedCodex 
 // Electron 41 normally selects Wayland automatically. Make the choice explicit
 // so mixed X11/Wayland environments never fall back to XWayland accidentally.
 configureNativeWayland(app);
+installVoiceTimingInstrumentation(app);
+installMediaTracing({ app, contentTracing });
 
 // Revision 6 accidentally woke and persisted the pet when any chat opened.
 // Clear that stale flag once; later user-initiated pet choices persist normally.
