@@ -114,9 +114,9 @@ async function validateRuntimeCodexPin(upstream: UpstreamRelease): Promise<void>
   const manifestFile = path.join(runtimeModules, "package.json");
   const manifest = JSON.parse(await readFile(manifestFile, "utf8"));
   const pinnedVersion = manifest.dependencies?.["@openai/codex"];
-  if (pinnedVersion !== upstream.codexVersion) {
+  if (pinnedVersion !== upstream.linuxRuntimeCodexVersion) {
     throw new Error(
-      `Linux runtime pins @openai/codex ${String(pinnedVersion)}; expected upstream ${upstream.codexVersion}`,
+      `Linux runtime pins @openai/codex ${String(pinnedVersion)}; expected Linux runtime ${upstream.linuxRuntimeCodexVersion}`,
     );
   }
 }
@@ -539,6 +539,7 @@ async function main(): Promise<void> {
       buildNumber: release.build,
       portRevision: upstream.portRevision,
       codexVersion: upstream.codexVersion,
+      linuxRuntimeCodexVersion: upstream.linuxRuntimeCodexVersion,
       archiveSha256: checksum,
       artifacts: await Promise.all(artifacts.map(async artifact => ({
         file: path.basename(artifact),

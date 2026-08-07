@@ -700,7 +700,7 @@ export class NodeReplMcpServer {
   async handle(message) {
     const id = Object.hasOwn(message || {}, "id") ? message.id : undefined;
     if (!message || typeof message.method !== "string") return id === undefined ? null : { jsonrpc: "2.0", id, error: { code: -32600, message: "Invalid JSON-RPC request" } };
-    if (message.method === "initialize") return { jsonrpc: "2.0", id, result: { protocolVersion: message.params?.protocolVersion || PROTOCOL_VERSION, capabilities: { tools: { listChanged: false } }, serverInfo: { name: "node_repl", version: "0.1.0-linux" }, instructions: "Use js for persistent JavaScript, js_add_node_module_dir for extra packages, and js_reset only when state cannot be reused." } };
+    if (message.method === "initialize") return { jsonrpc: "2.0", id, result: { protocolVersion: message.params?.protocolVersion || PROTOCOL_VERSION, capabilities: { experimental: { "codex/sandbox-state-meta": {} }, tools: { listChanged: false } }, serverInfo: { name: "node_repl", version: "0.1.0-linux" }, instructions: "Use js for persistent JavaScript, js_add_node_module_dir for extra packages, and js_reset only when state cannot be reused." } };
     if (message.method === "ping") return { jsonrpc: "2.0", id, result: {} };
     if (message.method === "tools/list") return { jsonrpc: "2.0", id, result: { tools: NODE_REPL_TOOLS } };
     if (message.method.startsWith("notifications/")) return null;

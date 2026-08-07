@@ -13,6 +13,11 @@ test("node_repl publishes the upstream three-tool contract", async () => {
     addModuleDirectory: async (directory: string) => { calls.push(["add", directory]); return true; },
   };
   const server = new NodeReplMcpServer(runtime);
+  const initialized = await server.handle({ jsonrpc: "2.0", id: 0, method: "initialize", params: { protocolVersion: "2025-06-18" } });
+  assert.deepEqual(initialized.result.capabilities, {
+    experimental: { "codex/sandbox-state-meta": {} },
+    tools: { listChanged: false },
+  });
   const listed = await server.handle({ jsonrpc: "2.0", id: 1, method: "tools/list" });
   assert.deepEqual(listed.result.tools.map((tool: { name: string }) => tool.name), ["js", "js_reset", "js_add_node_module_dir"]);
   assert.equal(NODE_REPL_TOOLS[0].inputSchema.properties.code.minLength, 1);

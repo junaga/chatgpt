@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 export interface UpstreamRelease {
   portRevision: number;
   codexVersion: string;
+  linuxRuntimeCodexVersion: string;
   archiveSha256: string;
   appPath: string;
   nativeArtifacts: Record<string, string[]>;
@@ -40,6 +41,7 @@ export function validateUpstream(input: unknown): UpstreamRelease {
   return {
     portRevision: Number(value.portRevision),
     codexVersion: requiredString(value.codexVersion, "codexVersion"),
+    linuxRuntimeCodexVersion: requiredString(value.linuxRuntimeCodexVersion, "linuxRuntimeCodexVersion"),
     archiveSha256: checksum,
     appPath: requiredString(value.appPath, "appPath"),
     nativeArtifacts: nativeArtifacts as Record<string, string[]>,
