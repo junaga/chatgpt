@@ -32,6 +32,10 @@ test("packaged Linux app starts, mounts its renderer, and opens a Git project", 
 
   await waitForLog(logs, /app routes mounted/, deadline);
 
+  await new Promise(resolve => setTimeout(resolve, 1_000));
+  assert.equal(child.exitCode, null, `Packaged app exited after bootstrap.\n${logs()}`);
+  assert.doesNotMatch(logs(), /Desktop bootstrap failed to start the main app/);
+
   assert.equal(await page.title(), "Codex");
   assert.match(page.url(), /^app:\/\/-\/index\.html/);
   assert.equal(await page.locator("#root").count(), 1);

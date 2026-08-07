@@ -14,14 +14,16 @@ const { enableNativeLinuxWindowBehavior } = require("../desktop/linux-runtime/wi
 const { installLinuxMainBundlePatches } = require("../desktop/linux-runtime/main-bundle-patches.cjs");
 
 const titlebar = "n===`win32`||n===`linux`?{titleBarStyle:`hidden`,titleBarOverlay:A9(r),...e===`quickChat`?{resizable:!0}:{}}:{titleBarStyle:`default`,...e===`quickChat`?{resizable:!0}:{}}";
+const titlebarOverlayUpdate = "(process.platform===`win32`||process.platform===`linux`)&&(this.windowZooms.set(n.id,t),n.setTitleBarOverlay(A9(t)))";
 const closeToTray = "if((process.platform===`win32`||process.platform===`linux`)&&!this.isAppQuitting&&this.options.canHideLastWindowToTray?.()===!0&&!t){}";
 
 test("Linux primary windows use native decorations and close instead of hiding to tray", () => {
-  const patched = enableNativeLinuxWindowBehavior(`${titlebar};${closeToTray}`);
+  const patched = enableNativeLinuxWindowBehavior(`${titlebar};${titlebarOverlayUpdate};${closeToTray}`);
   assert.match(patched, /n===`win32`\?\{titleBarStyle:`hidden`,titleBarOverlay:A9\(r\)/);
   assert.match(patched, /:\{titleBarStyle:`default`,\.\.\.e===`quickChat`/);
   assert.doesNotMatch(patched, /n===`win32`\|\|n===`linux`\?\{titleBarStyle:`hidden`/);
   assert.match(patched, /if\(process\.platform===`win32`&&!this\.isAppQuitting/);
+  assert.match(patched, /process\.platform===`win32`&&\(this\.windowZooms\.set/);
   assert.doesNotMatch(patched, /process\.platform===`win32`\|\|process\.platform===`linux`/);
   assert.doesNotThrow(() => new Script(`(() => { ${patched} })()`));
 });
@@ -38,10 +40,10 @@ test("the pinned packaged main bundle compiles after the complete Linux transfor
 });
 
 test("Linux window patch refuses an upstream bundle whose protected boundaries drift", () => {
-  assert.throws(() => enableNativeLinuxWindowBehavior(titlebar), /close-to-tray/);
-  assert.throws(() => enableNativeLinuxWindowBehavior(closeToTray), /titlebar/);
-  assert.throws(() => enableNativeLinuxWindowBehavior(`${titlebar} ${titlebar} ${closeToTray}`), /titlebar/);
-  assert.throws(() => enableNativeLinuxWindowBehavior(`${titlebar} ${closeToTray} ${closeToTray}`), /close-to-tray/);
+  assert.throws(() => enableNativeLinuxWindowBehavior(`${titlebar} ${closeToTray}`), /overlay update/);
+  assert.throws(() => enableNativeLinuxWindowBehavior(`${titlebarOverlayUpdate} ${closeToTray}`), /titlebar options/);
+  assert.throws(() => enableNativeLinuxWindowBehavior(`${titlebar} ${titlebarOverlayUpdate}`), /close-to-tray/);
+  assert.throws(() => enableNativeLinuxWindowBehavior(`${titlebar} ${titlebarOverlayUpdate} ${titlebarOverlayUpdate} ${closeToTray}`), /overlay update/);
 });
 
 test("packaged main-bundle loader installation is idempotent", async t => {
