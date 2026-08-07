@@ -24,9 +24,9 @@ test("the desktop entry declares the chatgpt command and codex links", async () 
 
 test("NixOS and Gentoo recipes consume the current revision root tarball", async () => {
   const nix = await readFile(new URL("nix/default.nix", repositoryPackaging), "utf8");
-  const gentoo = await readFile(new URL("gentoo/chatgpt-26.730.61639_p2.ebuild", repositoryPackaging), "utf8");
+  const gentoo = await readFile(new URL("gentoo/chatgpt-26.730.61639_p4.ebuild", repositoryPackaging), "utf8");
   for (const recipe of [nix, gentoo]) {
-    assert.match(recipe, /upstream-26\.730\.61639-port\.2\/chatgpt\.tar\.gz/);
+    assert.match(recipe, /upstream-26\.730\.61639-port\.4\/chatgpt\.tar\.gz/);
   }
   assert.doesNotMatch(nix, /AAAA/);
 });
