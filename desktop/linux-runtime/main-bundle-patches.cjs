@@ -10,6 +10,8 @@ const { enableLinuxPictureInPicture } = require("./picture-in-picture.cjs");
 const { enableLinuxRemoteControlDeviceKeys } = require("./remote-control-device-key.cjs");
 const { enableNativeLinuxWindowBehavior } = require("./window-behavior.cjs");
 
+const installedVendorRoots = new Set();
+
 function composeLinuxMainBundle(source) {
   return enableNativeLinuxWindowBehavior(
     enableLinuxComputerUse(
@@ -23,7 +25,9 @@ function composeLinuxMainBundle(source) {
 }
 
 function installLinuxMainBundlePatches(vendorAppRoot) {
-  const buildRoot = path.join(vendorAppRoot, ".vite", "build");
+  const resolvedVendorAppRoot = path.resolve(vendorAppRoot);
+  if (installedVendorRoots.has(resolvedVendorAppRoot)) return;
+  const buildRoot = path.join(resolvedVendorAppRoot, ".vite", "build");
   const mainBundles = fs.readdirSync(buildRoot).filter(filename => /^main-.+\.js$/.test(filename));
   if (mainBundles.length !== 1) {
     throw new Error(`Expected one upstream main bundle, found ${mainBundles.length}`);
@@ -40,6 +44,7 @@ function installLinuxMainBundlePatches(vendorAppRoot) {
     [mainBundle, composeLinuxMainBundle],
     [path.resolve(buildRoot, chromeLifecycleBundles[0]), enableLinuxChromeNativeHostLifecycle],
   ]);
+  installedVendorRoots.add(resolvedVendorAppRoot);
   const originalLoader = Module._extensions[".js"];
   Module._extensions[".js"] = function linuxParityPatchedLoader(module, filename) {
     const transform = transformations.get(path.resolve(filename));
